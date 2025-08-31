@@ -24,3 +24,17 @@ Built with **React Native** and **Firebase**, HakbangQuest provides a smooth exp
 - 📊 **Leaderboard & Progress Analytics**  
 - 📦 **Inventory Tracking & Reporting** *(optional)*  
 - 📱 **Responsive UI** for all device sizes  
+
+---
+
+## 📄 License  
+This project is licensed under the **MIT License**.  
+See the [LICENSE](LICENSE) file for details.  
+
+---
+
+## 📬 Contact  
+For support or inquiries:  
+📧 Email: **support@hakbangquest.com**  
+
+💡 *HakbangQuest – Transform your fitness journey, one step at a time!*  
