@@ -29,10 +29,49 @@ import JoggingIcon from "../components/icons/jogging.png"
 import PushupIcon from "../components/icons/pushup.png"
 import SquatIcon from "../components/icons/squat.png"
 import SitupIcon from "../components/icons/situp.png"
-const { width } = Dimensions.get("window")
+
+// Get responsive dimensions
+const { width, height } = Dimensions.get("window");
+const isSmallDevice = width < 375; // iPhone SE and similar small Android devices
+const isMediumDevice = width >= 375 && width < 414; // Standard phones
+const isLargeDevice = width >= 414; // Large phones
+
+// Responsive font sizes
+const responsiveFontSizes = {
+  xs: isSmallDevice ? 10 : isMediumDevice ? 11 : 12,
+  sm: isSmallDevice ? 12 : isMediumDevice ? 13 : 14,
+  base: isSmallDevice ? 14 : isMediumDevice ? 15 : 16,
+  lg: isSmallDevice ? 16 : isMediumDevice ? 18 : 20,
+  xl: isSmallDevice ? 18 : isMediumDevice ? 20 : 22,
+  "2xl": isSmallDevice ? 20 : isMediumDevice ? 22 : 24,
+  "3xl": isSmallDevice ? 24 : isMediumDevice ? 28 : 32,
+  "4xl": isSmallDevice ? 30 : isMediumDevice ? 36 : 40,
+  "5xl": isSmallDevice ? 36 : isMediumDevice ? 42 : 48,
+};
+
+// Responsive padding/margin
+const responsivePadding = {
+  xs: isSmallDevice ? 2 : isMediumDevice ? 3 : 4,
+  sm: isSmallDevice ? 3 : isMediumDevice ? 4 : 5,
+  base: isSmallDevice ? 4 : isMediumDevice ? 5 : 6,
+  lg: isSmallDevice ? 5 : isMediumDevice ? 6 : 8,
+  xl: isSmallDevice ? 6 : isMediumDevice ? 8 : 10,
+};
+
+// Responsive sizes
+const responsiveSizes = {
+  iconSmall: isSmallDevice ? 16 : isMediumDevice ? 18 : 20,
+  iconMedium: isSmallDevice ? 20 : isMediumDevice ? 22 : 24,
+  iconLarge: isSmallDevice ? 24 : isMediumDevice ? 28 : 32,
+  iconXL: isSmallDevice ? 28 : isMediumDevice ? 32 : 36,
+  activityIcon: isSmallDevice ? 48 : isMediumDevice ? 56 : 64,
+  headerIcon: isSmallDevice ? 100 : isMediumDevice ? 120 : 128,
+  buttonHeight: isSmallDevice ? 56 : isMediumDevice ? 64 : 72,
+};
+
 const isAndroid = Platform.OS === "android"
-const isSmallDevice = width < 375
-// Enhanced ButtonSection Component
+
+// Enhanced ButtonSection Component with responsive design
 const ButtonSection = ({
   coordinates,
   isStrengthActivity,
@@ -45,18 +84,22 @@ const ButtonSection = ({
   saveActivity,
   clearActivity,
   startActivity,
-  isSmallDevice,
+  responsiveFontSizes,
+  responsivePadding,
+  responsiveSizes,
 }) => {
   const resumeScale = useRef(new Animated.Value(1)).current
   const saveScale = useRef(new Animated.Value(1)).current
   const clearScale = useRef(new Animated.Value(1)).current
   const startScale = useRef(new Animated.Value(1)).current
+  
   const handlePressIn = (scale) => {
     Animated.spring(scale, {
       toValue: 0.95,
       useNativeDriver: true,
     }).start()
   }
+  
   const handlePressOut = (scale) => {
     Animated.spring(scale, {
       toValue: 1,
@@ -64,6 +107,7 @@ const ButtonSection = ({
       useNativeDriver: true,
     }).start()
   }
+  
   const handleClearActivity = () => {
     Alert.alert(
       "Clear Activity",
@@ -82,17 +126,17 @@ const ButtonSection = ({
       { cancelable: true },
     )
   }
+  
   return (
-    <View style={twrnc`w-full px-6 ${isSmallDevice ? "mt-4" : "mt-6"} mb-8`}>
+    <View style={[twrnc`w-full mb-8`, { paddingHorizontal: responsivePadding.base * 4, marginTop: responsivePadding.lg * 4 }]}>
       {coordinates.length > 0 || (isStrengthActivity && stats.reps > 0 && !sensorSubscription) ? (
-        <View style={twrnc`flex-col gap-3`}>
-          {/* Resume Activity Button - REMOVED */}
+        <View style={[twrnc`flex-col`, { gap: responsivePadding.sm * 4 }]}>
           {/* Save Activity Button */}
           {isStrengthActivity && (
             <Animated.View style={{ transform: [{ scale: saveScale }] }}>
               <TouchableOpacity
                 style={[
-                  twrnc`rounded-2xl py-4 px-6 items-center shadow-lg`,
+                  twrnc`rounded-2xl items-center shadow-lg`,
                   {
                     backgroundColor: "#06D6A0",
                     shadowColor: "#06D6A0",
@@ -100,6 +144,9 @@ const ButtonSection = ({
                     shadowOpacity: 0.3,
                     shadowRadius: 8,
                     elevation: 8,
+                    paddingVertical: responsivePadding.base * 4,
+                    paddingHorizontal: responsivePadding.base * 6,
+                    minHeight: responsiveSizes.buttonHeight,
                   },
                   isTrackingLoading && twrnc`opacity-60`,
                 ]}
@@ -110,35 +157,39 @@ const ButtonSection = ({
                 activeOpacity={1}
               >
                 <View style={twrnc`flex-row items-center`}>
-                  <View style={twrnc`bg-white bg-opacity-20 rounded-full p-2 mr-4`}>
+                  <View style={[twrnc`bg-white bg-opacity-20 rounded-full mr-4`, { padding: responsivePadding.sm * 2 }]}>
                     {isTrackingLoading ? (
                       <ActivityIndicator size="small" color="#FFFFFF" />
                     ) : (
-                      <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                      <Ionicons name="checkmark-circle" size={responsiveSizes.iconMedium} color="#FFFFFF" />
                     )}
                   </View>
                   <View style={twrnc`flex-1`}>
-                    <CustomText weight="bold" style={twrnc`text-white text-lg mb-1`}>
+                    <CustomText weight="bold" style={[twrnc`text-white mb-1`, { fontSize: responsiveFontSizes.lg }]}>
                       {isTrackingLoading ? "Saving..." : "Save Activity"}
                     </CustomText>
-                    <CustomText style={twrnc`text-white text-opacity-80 text-sm`}>
+                    <CustomText style={[twrnc`text-white text-opacity-80`, { fontSize: responsiveFontSizes.sm }]}>
                       {isTrackingLoading ? "Please wait..." : `Complete your ${stats.reps || 0} reps session`}
                     </CustomText>
                   </View>
                   {!isTrackingLoading && (
-                    <Ionicons name="chevron-forward" size={18} color="#FFFFFF" style={twrnc`opacity-60`} />
+                    <Ionicons name="chevron-forward" size={responsiveSizes.iconSmall} color="#FFFFFF" style={twrnc`opacity-60`} />
                   )}
                 </View>
               </TouchableOpacity>
             </Animated.View>
           )}
+          
           {/* Clear Activity Button */}
           <Animated.View style={{ transform: [{ scale: clearScale }] }}>
             <TouchableOpacity
               style={[
-                twrnc`rounded-2xl py-4 px-6 items-center border-2 border-[#EF476F]`,
+                twrnc`rounded-2xl items-center border-2 border-[#EF476F]`,
                 {
                   backgroundColor: "rgba(239, 71, 111, 0.1)",
+                  paddingVertical: responsivePadding.base * 4,
+                  paddingHorizontal: responsivePadding.base * 6,
+                  minHeight: responsiveSizes.buttonHeight,
                 },
                 isTrackingLoading && twrnc`opacity-60`,
               ]}
@@ -149,18 +200,18 @@ const ButtonSection = ({
               activeOpacity={1}
             >
               <View style={twrnc`flex-row items-center`}>
-                <View style={twrnc`bg-[#EF476F] bg-opacity-20 rounded-full p-2 mr-4`}>
-                  <Ionicons name="trash" size={18} color="#EF476F" />
+                <View style={[twrnc`bg-[#EF476F] bg-opacity-20 rounded-full mr-4`, { padding: responsivePadding.sm * 2 }]}>
+                  <Ionicons name="trash" size={responsiveSizes.iconSmall} color="#EF476F" />
                 </View>
                 <View style={twrnc`flex-1`}>
-                  <CustomText weight="bold" style={twrnc`text-[#EF476F] text-lg mb-1`}>
+                  <CustomText weight="bold" style={[twrnc`text-[#EF476F] mb-1`, { fontSize: responsiveFontSizes.lg }]}>
                     Clear Activity
                   </CustomText>
-                  <CustomText style={twrnc`text-[#EF476F] text-opacity-80 text-sm`}>
+                  <CustomText style={[twrnc`text-[#EF476F] text-opacity-80`, { fontSize: responsiveFontSizes.sm }]}>
                     Remove all progress and start over
                   </CustomText>
                 </View>
-                <Ionicons name="warning" size={18} color="#EF476F" style={twrnc`opacity-60`} />
+                <Ionicons name="warning" size={responsiveSizes.iconSmall} color="#EF476F" style={twrnc`opacity-60`} />
               </View>
             </TouchableOpacity>
           </Animated.View>
@@ -170,7 +221,7 @@ const ButtonSection = ({
           <Animated.View style={{ transform: [{ scale: startScale }] }}>
             <TouchableOpacity
               style={[
-                twrnc`rounded-2xl py-5 px-8 items-center shadow-lg`,
+                twrnc`rounded-2xl items-center shadow-lg`,
                 {
                   backgroundColor: currentActivity.color,
                   shadowColor: currentActivity.color,
@@ -178,6 +229,9 @@ const ButtonSection = ({
                   shadowOpacity: 0.4,
                   shadowRadius: 10,
                   elevation: 10,
+                  paddingVertical: responsivePadding.lg * 4,
+                  paddingHorizontal: responsivePadding.xl * 4,
+                  minHeight: responsiveSizes.buttonHeight + 8,
                 },
                 isTrackingLoading && twrnc`opacity-60`,
               ]}
@@ -188,18 +242,18 @@ const ButtonSection = ({
               activeOpacity={1}
             >
               <View style={twrnc`flex-row items-center`}>
-                <View style={twrnc`bg-white bg-opacity-25 rounded-full p-3 mr-5`}>
-                  <Ionicons name="play" size={24} color="#FFFFFF" />
+                <View style={[twrnc`bg-white bg-opacity-25 rounded-full mr-5`, { padding: responsivePadding.sm * 3 }]}>
+                  <Ionicons name="play" size={responsiveSizes.iconLarge} color="#FFFFFF" />
                 </View>
                 <View style={twrnc`flex-1`}>
-                  <CustomText weight="bold" style={twrnc`text-white text-xl mb-1`}>
+                  <CustomText weight="bold" style={[twrnc`text-white mb-1`, { fontSize: responsiveFontSizes.xl }]}>
                     {activeQuest ? "Start Quest" : `Start ${isStrengthActivity ? "Counting" : "Tracking"}`}
                   </CustomText>
-                  <CustomText style={twrnc`text-white text-opacity-90 text-base`}>
+                  <CustomText style={[twrnc`text-white text-opacity-90`, { fontSize: responsiveFontSizes.base }]}>
                     Begin your {currentActivity.name.toLowerCase()} session
                   </CustomText>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color="#FFFFFF" style={twrnc`opacity-70`} />
+                <Ionicons name="chevron-forward" size={responsiveSizes.iconMedium} color="#FFFFFF" style={twrnc`opacity-70`} />
               </View>
             </TouchableOpacity>
           </Animated.View>
@@ -208,8 +262,11 @@ const ButtonSection = ({
     </View>
   )
 }
+
 const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => {
   console.log("ActivityScreen: Initialized with params:", params)
+  
+  // State variables
   const [gpsEnabled, setGpsEnabled] = useState(true)
   const [autoPauseEnabled, setAutoPauseEnabled] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState(params.activityType || "walking")
@@ -227,16 +284,19 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
       reps: 0,
     },
   )
+  
   // User stats for XP calculation (simplified - no quest generation)
   const [userStats, setUserStats] = useState({
     level: 1,
     totalXP: 0,
   })
+  
   // Enhanced quest state - automatically set from params (received from Dashboard)
   const [activeQuest, setActiveQuest] = useState(null)
   const [questBadge, setQuestBadge] = useState(null)
   const [pulseAnim] = useState(new Animated.Value(1))
   console.log("ActivityScreen: Current activeQuest state:", activeQuest)
+  
   const [showSettings, setShowSettings] = useState(false)
   const [isViewingPastActivity, setIsViewingPastActivity] = useState(params.isViewingPastActivity || false)
   const [repCount, setRepCount] = useState(0)
@@ -246,6 +306,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
   const [sensorSubscription, setSensorSubscription] = useState(null)
   const [isTrackingLoading, setIsTrackingLoading] = useState(false)
   const [showFaceCounter, setShowFaceCounter] = useState(false)
+
   const activities = useMemo(
     () => [
       {
@@ -314,11 +375,14 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
     ],
     [],
   )
+  
   const currentActivity = useMemo(
     () => activities.find((a) => a.id === selectedActivity) || activities[0],
     [activities, selectedActivity],
   )
+  
   const isStrengthActivity = useMemo(() => !currentActivity.isGpsActivity, [currentActivity])
+
   // Load user stats from Firestore
   const loadUserStats = useCallback(async () => {
     try {
@@ -344,9 +408,11 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
       console.error("ActivityScreen: Error loading user stats:", error)
     }
   }, [])
+
   useEffect(() => {
     loadUserStats()
   }, [loadUserStats])
+
   // Helper function to format duration properly
   const formatDuration = useCallback((seconds) => {
     const hours = Math.floor(seconds / 3600)
@@ -357,6 +423,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
     }
     return `${minutes}:${secs.toString().padStart(2, "0")}`
   }, [])
+
   useEffect(() => {
     if (activeQuest) {
       console.log("ActivityScreen: Starting pulse animation for active quest")
@@ -376,6 +443,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
       ).start()
     }
   }, [activeQuest, pulseAnim])
+
   // Enhanced quest initialization from params (received from Dashboard)
   useEffect(() => {
     console.log("ActivityScreen: Processing params for quest initialization:", params)
@@ -405,6 +473,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
       setActiveQuest(null)
     }
   }, [params, selectedActivity])
+
   const calculateCalories = useCallback(() => {
     const weight = 70
     const timeInHours = (Number.parseFloat(time) || 0) / 60
@@ -412,29 +481,35 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
     const kcal = (activity?.met || 3.5) * weight * timeInHours
     return Math.round(kcal)
   }, [time, selectedActivity, activities])
+
   const calculateTargetDistance = useCallback(() => {
     const timeInHours = (Number.parseFloat(time) || 0) / 60
     const speeds = { walking: 5, running: 10, cycling: 15, jogging: 8 }
     return (timeInHours * (speeds[selectedActivity] || 5)).toFixed(2)
   }, [time, selectedActivity])
+
   useEffect(() => {
     setCalories(calculateCalories())
   }, [calculateCalories])
+
   useEffect(() => {
     if (params?.activityType && selectedActivity !== params.activityType) {
       setDistance(calculateTargetDistance())
     }
   }, [selectedActivity, time, calculateTargetDistance, params])
+
   const handleDistanceChange = useCallback((value) => {
     if (/^\d*\.?\d{0,2}$/.test(value) || value === "") {
       setDistance(value)
     }
   }, [])
+
   const handleRepGoalChange = useCallback((value) => {
     if (/^\d+$/.test(value) || value === "") {
       setRepGoal(value === "" ? 0 : Number.parseInt(value, 10))
     }
   }, [])
+
   const startAccelerometerTracking = useCallback(() => {
     console.log("ActivityScreen: Starting accelerometer tracking for", selectedActivity)
     Accelerometer.setUpdateInterval(100)
@@ -469,6 +544,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
       subscription.remove()
     }
   }, [selectedActivity, isTrackingReps])
+
   const stopAccelerometerTracking = useCallback(() => {
     console.log("ActivityScreen: Stopping accelerometer tracking")
     if (sensorSubscription) {
@@ -476,6 +552,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
       setSensorSubscription(null)
     }
   }, [sensorSubscription])
+
   const incrementRep = useCallback(() => {
     setRepCount((prev) => {
       const newCount = prev + 1
@@ -487,6 +564,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
       reps: (prevStats.reps || 0) + 1,
     }))
   }, [])
+
   // Enhanced saveActivity with XP saving and quest completion
   const saveActivity = useCallback(async () => {
     console.log("ActivityScreen: Starting save activity process")
@@ -674,6 +752,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
           }
         }
       }
+      console.log("ActivityScreen: Calculating activity metrics")
       // Calculate bonus XP based on performance
       let bonusXP = 0
       if (isStrengthActivity) {
@@ -757,21 +836,21 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
       if (questCompleted) {
         successTitle = "Quest Completed!"
         if (isStrengthActivity) {
-          successMessage = `🎉 Congratulations! You completed the "${activeQuest?.title}" quest and earned ${xpEarned} XP!\n\n📊 Workout Summary:\n• ${stats.reps} ${selectedActivity} reps\n• ${formatDuration(stats.duration)} duration\n• ${calories} calories burned`
+          successMessage = `Congratulations! You completed the "${activeQuest?.title}" quest and earned ${xpEarned} XP!\n\nWorkout Summary:\n• ${stats.reps} ${selectedActivity} reps\n• ${formatDuration(stats.duration)} duration\n• ${calories} calories burned`
         } else {
-          successMessage = `🎉 Congratulations! You completed the "${activeQuest?.title}" quest and earned ${xpEarned} XP!\n\n📊 Workout Summary:\n• ${calculatedMetrics.distanceInKm.toFixed(2)} km distance\n• ${formatDuration(stats.duration)} duration\n• ${calculatedMetrics.avgSpeed.toFixed(1)} km/h avg speed\n• ${stats.steps.toLocaleString()} steps\n• ${calories} calories burned`
+          successMessage = `Congratulations! You completed the "${activeQuest?.title}" quest and earned ${xpEarned} XP!\n\nWorkout Summary:\n• ${calculatedMetrics.distanceInKm.toFixed(2)} km distance\n• ${formatDuration(stats.duration)} duration\n• ${calculatedMetrics.avgSpeed.toFixed(1)} km/h avg speed\n• ${stats.steps.toLocaleString()} steps\n• ${calories} calories burned`
         }
       } else {
         successTitle = "Great Workout!"
         if (isStrengthActivity) {
-          successMessage = `💪 Awesome ${selectedActivity} session!\n\n📊 Workout Summary:\n• ${stats.reps} reps completed\n• ${formatDuration(stats.duration)} duration\n• ${calories} calories burned\n• ${xpEarned} XP earned`
+          successMessage = `Awesome ${selectedActivity} session!\n\nWorkout Summary:\n• ${stats.reps} reps completed\n• ${formatDuration(stats.duration)} duration\n• ${calories} calories burned\n• ${xpEarned} XP earned`
         } else {
-          successMessage = `🏃‍♂️ Great ${selectedActivity} session!\n\n📊 Workout Summary:\n• ${calculatedMetrics.distanceInKm.toFixed(2)} km covered\n• ${formatDuration(stats.duration)} duration\n• ${calculatedMetrics.avgSpeed.toFixed(1)} km/h avg speed\n• ${stats.steps.toLocaleString()} steps\n• ${calories} calories burned\n• ${xpEarned} XP earned`
+          successMessage = `Great ${selectedActivity} session!\n\nWorkout Summary:\n• ${calculatedMetrics.distanceInKm.toFixed(2)} km covered\n• ${formatDuration(stats.duration)} duration\n• ${calculatedMetrics.avgSpeed.toFixed(1)} km/h avg speed\n• ${stats.steps.toLocaleString()} steps\n• ${calories} calories burned\n• ${xpEarned} XP earned`
         }
       }
       // Add bonus XP message if applicable
       if (bonusXP > 0) {
-        successMessage += `\n🌟 Bonus: +${bonusXP} XP for excellent performance!`
+        successMessage += `\nBonus: +${bonusXP} XP for excellent performance!`
       }
       console.log("ActivityScreen: Activity saved successfully, showing success message")
       showModal(successTitle, successMessage, () => {
@@ -811,6 +890,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
     formatDuration,
     showModal,
   ])
+
   const resumeTracking = useCallback(() => {
     console.log("ActivityScreen: Resuming activity tracking")
     const activityConfig = activities.find((a) => a.id === selectedActivity)
@@ -872,6 +952,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
     repGoal,
     getDisplayQuestProgress, // Add this dependency
   ])
+
   const startActivity = useCallback(() => {
     console.log("ActivityScreen: Starting activity:", selectedActivity)
     const activityConfig = activities.find((a) => a.id === selectedActivity)
@@ -931,6 +1012,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
     isViewingPastActivity,
     repGoal,
   ])
+
   const clearActivity = useCallback(() => {
     console.log("ActivityScreen: Clearing activity data")
     setCoordinates([])
@@ -939,11 +1021,13 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
     setRepCount(0)
     stopAccelerometerTracking()
   }, [stopAccelerometerTracking])
+
   useEffect(() => {
     return () => {
       stopAccelerometerTracking()
     }
   }, [stopAccelerometerTracking])
+
   // Updated quest progress calculation to use Dashboard data when available
   const getDisplayQuestProgress = useCallback(
     (quest) => {
@@ -982,6 +1066,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
     },
     [stats.steps, stats.distance, stats.reps, stats.duration],
   )
+
   const getQuestStatus = useCallback(
     (quest) => {
       const progress = getDisplayQuestProgress(quest)
@@ -991,6 +1076,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
     },
     [getDisplayQuestProgress],
   )
+
   // Get current quest value for display
   const getCurrentQuestValue = useCallback(
     (quest) => {
@@ -1015,12 +1101,15 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
     },
     [stats.steps, stats.reps, stats.distance, stats.duration],
   )
+
   // Function to show modal
   const showModal = (title, message, onClose) => {
     alert(`${title}: ${message}`)
     if (onClose) onClose()
   }
+
   console.log("ActivityScreen: Rendering with activeQuest:", activeQuest)
+  
   // Handler for FaceProximityPushUpCounter rep updates
   const handleFaceCounterRep = useCallback((rep) => {
     setRepCount(rep);
@@ -1049,92 +1138,165 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
   return (
     <View style={twrnc`flex-1 bg-[#121826]`}>
       <StatusBar barStyle="light-content" backgroundColor="#121826" />
-      {/* Enhanced Header */}
-      <View style={twrnc`bg-[#2A2E3A] pt-${isAndroid ? "10" : "12"} pb-4 shadow-lg`}>
-        <View style={twrnc`flex-row items-center justify-between px-5`}>
+      
+      {/* Enhanced Responsive Header */}
+      <View style={[
+        twrnc`bg-[#2A2E3A] shadow-lg`,
+        { 
+          paddingTop: isAndroid ? responsivePadding.xl * 2.5 : responsivePadding.xl * 3,
+          paddingBottom: responsivePadding.base * 4
+        }
+      ]}>
+        <View style={[twrnc`flex-row items-center justify-between`, { paddingHorizontal: responsivePadding.base * 5 }]}>
           <TouchableOpacity
-            style={twrnc`p-2 -ml-2 rounded-full bg-white bg-opacity-10`}
+            style={[
+              twrnc`rounded-full bg-white bg-opacity-10`,
+              { 
+                padding: responsivePadding.sm * 2,
+                marginLeft: -responsivePadding.sm * 2
+              }
+            ]}
             onPress={navigateToDashboard}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name="chevron-back" size={24} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={responsiveSizes.iconLarge} color="#FFFFFF" />
           </TouchableOpacity>
+          
           <View style={twrnc`flex-1 items-center`}>
-            <CustomText weight="bold" style={twrnc`text-white text-xl`}>
+            <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.xl }]}>
               {activeQuest ? activeQuest.title : currentActivity.name}
             </CustomText>
-            <View style={twrnc`flex-row items-center mt-1`}>
-              <View style={twrnc`bg-[${currentActivity.color}] px-2 py-1 rounded-full mr-2`}>
-                <CustomText style={twrnc`text-white text-xs font-medium`}>Level {userStats.level}</CustomText>
+            <View style={[twrnc`flex-row items-center`, { marginTop: responsivePadding.xs }]}>
+              <View style={[
+                twrnc`bg-[${currentActivity.color}] rounded-full mr-2`,
+                { 
+                  paddingHorizontal: responsivePadding.sm * 2,
+                  paddingVertical: responsivePadding.xs
+                }
+              ]}>
+                <CustomText style={[twrnc`text-white font-medium`, { fontSize: responsiveFontSizes.xs }]}>
+                  Level {userStats.level}
+                </CustomText>
               </View>
-              <CustomText style={twrnc`text-gray-400 text-sm`}>{userStats.totalXP} XP</CustomText>
+              <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.sm }]}>
+                {userStats.totalXP} XP
+              </CustomText>
             </View>
           </View>
+          
           <TouchableOpacity
-            style={twrnc`p-2 -mr-2 rounded-full bg-white bg-opacity-10`}
+            style={[
+              twrnc`rounded-full bg-white bg-opacity-10`,
+              { 
+                padding: responsivePadding.sm * 2,
+                marginRight: -responsivePadding.sm * 2
+              }
+            ]}
             onPress={() => setShowSettings(!showSettings)}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <Ionicons name={showSettings ? "close" : "settings-outline"} size={24} color="#FFFFFF" />
+            <Ionicons name={showSettings ? "close" : "settings-outline"} size={responsiveSizes.iconLarge} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       </View>
-      <ScrollView contentContainerStyle={twrnc`pb-20`} style={twrnc`flex-1`} showsVerticalScrollIndicator={false}>
-        {/* Activity Icon Section */}
-        <View style={twrnc`items-center justify-center mt-6 mb-8`}>
+
+      <ScrollView 
+        contentContainerStyle={[{ paddingBottom: responsivePadding.xl * 5 }]} 
+        style={twrnc`flex-1`} 
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Responsive Activity Icon Section */}
+        <View style={[
+          twrnc`items-center justify-center`,
+          { 
+            marginTop: responsivePadding.lg * 6,
+            marginBottom: responsivePadding.xl * 8
+          }
+        ]}>
           <View
             style={[
-              twrnc`w-32 h-32 rounded-2xl items-center justify-center mb-6 shadow-lg`,
-              { backgroundColor: currentActivity.color, shadowColor: currentActivity.color },
+              twrnc`rounded-2xl items-center justify-center shadow-lg`,
+              {
+                backgroundColor: currentActivity.color,
+                shadowColor: currentActivity.color,
+                width: responsiveSizes.headerIcon,
+                height: responsiveSizes.headerIcon,
+                marginBottom: responsivePadding.lg * 6
+              }
             ]}
           >
             <Image
               source={currentActivity.icon}
-              style={[twrnc`w-16 h-16`, { tintColor: currentActivity.iconColor }]}
+              style={[
+                { 
+                  tintColor: currentActivity.iconColor,
+                  width: responsiveSizes.activityIcon,
+                  height: responsiveSizes.activityIcon
+                }
+              ]}
               resizeMode="contain"
             />
           </View>
-          {/* Strength Activity Rep Counter */}
+          
+          {/* Responsive Strength Activity Rep Counter */}
           {isStrengthActivity && sensorSubscription && (
-            <View style={twrnc`items-center mb-6`}>
-              <CustomText style={twrnc`text-gray-400 text-sm mb-1`}>Reps Completed</CustomText>
+            <View style={[twrnc`items-center`, { marginBottom: responsivePadding.lg * 6 }]}>
+              <CustomText style={[twrnc`text-gray-400 mb-1`, { fontSize: responsiveFontSizes.sm }]}>
+                Reps Completed
+              </CustomText>
               <View style={twrnc`flex-row items-center`}>
-                <CustomText weight="bold" style={twrnc`text-white text-5xl`}>
+                <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes["5xl"] }]}>
                   {repCount}
                 </CustomText>
-                <CustomText style={twrnc`text-gray-400 text-lg ml-2`}>/ {repGoal}</CustomText>
+                <CustomText style={[twrnc`text-gray-400 ml-2`, { fontSize: responsiveFontSizes.lg }]}>
+                  / {repGoal}
+                </CustomText>
               </View>
-              <View style={twrnc`w-full max-w-xs mt-4`}>
-                <View style={twrnc`h-3 bg-[#2A2E3A] rounded-full overflow-hidden`}>
+              <View style={[
+                twrnc`w-full max-w-xs`,
+                { 
+                  marginTop: responsivePadding.base * 4,
+                  maxWidth: isSmallDevice ? width * 0.8 : width * 0.7
+                }
+              ]}>
+                <View style={[twrnc`bg-[#2A2E3A] rounded-full overflow-hidden`, { height: responsivePadding.sm * 3 }]}>
                   <View
                     style={[
-                      twrnc`h-3 rounded-full`,
+                      twrnc`rounded-full`,
                       {
                         width: `${Math.min((repCount / repGoal) * 100, 100)}%`,
                         backgroundColor: repCount >= repGoal ? "#06D6A0" : currentActivity.color,
+                        height: responsivePadding.sm * 3
                       },
                     ]}
                   />
                 </View>
               </View>
-              <View style={twrnc`flex-row mt-6`}>
+              <View style={[twrnc`flex-row`, { marginTop: responsivePadding.lg * 6 }]}>
                 <TouchableOpacity
-                  style={twrnc`bg-[#2A2E3A] rounded-full p-4 mr-4`}
+                  style={[
+                    twrnc`bg-[#2A2E3A] rounded-full mr-4`,
+                    { padding: responsivePadding.base * 4 }
+                  ]}
                   onPress={incrementRep}
                   disabled={isTrackingLoading}
                 >
-                  <Ionicons name="add" size={30} color="#FFFFFF" />
+                  <Ionicons name="add" size={responsiveSizes.iconXL} color="#FFFFFF" />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={twrnc`bg-[#EF476F] rounded-full p-4`}
+                  style={[
+                    twrnc`bg-[#EF476F] rounded-full`,
+                    { padding: responsivePadding.base * 4 }
+                  ]}
                   onPress={stopAccelerometerTracking}
                   disabled={isTrackingLoading}
                 >
-                  <Ionicons name="stop" size={30} color="#FFFFFF" />
+                  <Ionicons name="stop" size={responsiveSizes.iconXL} color="#FFFFFF" />
                 </TouchableOpacity>
               </View>
             </View>
           )}
+          
           <ButtonSection
             coordinates={coordinates}
             isStrengthActivity={isStrengthActivity}
@@ -1147,52 +1309,71 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
             saveActivity={saveActivity}
             clearActivity={clearActivity}
             startActivity={startActivity}
-            isSmallDevice={isSmallDevice}
+            responsiveFontSizes={responsiveFontSizes}
+            responsivePadding={responsivePadding}
+            responsiveSizes={responsiveSizes}
           />
         </View>
-        {/* Active Quest Card (from Dashboard) */}
+
+        {/* Responsive Active Quest Card */}
         {activeQuest && (
-          <View style={twrnc`px-5 mb-6`}>
+          <View style={[{ paddingHorizontal: responsivePadding.base * 5, marginBottom: responsivePadding.lg * 6 }]}>
             <Animated.View
               style={[twrnc`overflow-hidden rounded-2xl shadow-lg`, { transform: [{ scale: pulseAnim }] }]}
             >
-              <View style={twrnc`bg-[#2A2E3A] p-4 rounded-2xl border border-[#4361EE]`}>
-                <View style={twrnc`flex-row items-center mb-3`}>
-                  <View style={twrnc`bg-[#4361EE] rounded-full p-2 mr-3`}>
-                    <Ionicons name="trophy" size={20} color="#FFFFFF" />
+              <View style={[
+                twrnc`bg-[#2A2E3A] rounded-2xl border border-[#4361EE]`,
+                { padding: responsivePadding.base * 4 }
+              ]}>
+                <View style={[twrnc`flex-row items-center`, { marginBottom: responsivePadding.sm * 3 }]}>
+                  <View style={[
+                    twrnc`bg-[#4361EE] rounded-full mr-3`,
+                    { padding: responsivePadding.sm * 2 }
+                  ]}>
+                    <Ionicons name="trophy" size={responsiveSizes.iconMedium} color="#FFFFFF" />
                   </View>
                   <View style={twrnc`flex-1`}>
-                    <CustomText weight="bold" style={twrnc`text-white text-lg mb-1`}>
+                    <CustomText weight="bold" style={[twrnc`text-white mb-1`, { fontSize: responsiveFontSizes.lg }]}>
                       {activeQuest.title}
                     </CustomText>
-                    <CustomText style={twrnc`text-gray-400 text-sm`}>{activeQuest.description}</CustomText>
+                    <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.sm }]}>
+                      {activeQuest.description}
+                    </CustomText>
                   </View>
-                  <View style={twrnc`bg-[#FFC107] px-3 py-1 rounded-full`}>
-                    <CustomText style={twrnc`text-[#121826] text-xs font-bold`}>
+                  <View style={[
+                    twrnc`bg-[#FFC107] rounded-full`,
+                    { 
+                      paddingHorizontal: responsivePadding.sm * 3,
+                      paddingVertical: responsivePadding.xs
+                    }
+                  ]}>
+                    <CustomText style={[twrnc`text-[#121826] font-bold`, { fontSize: responsiveFontSizes.xs }]}>
                       +{activeQuest.xpReward || 50} XP
                     </CustomText>
                   </View>
                 </View>
-                <View style={twrnc`mt-3`}>
-                  <View style={twrnc`flex-row justify-between items-center mb-2`}>
-                    <CustomText style={twrnc`text-gray-400 text-sm`}>Progress</CustomText>
-                    <CustomText weight="bold" style={twrnc`text-white text-sm`}>
+                
+                <View style={[{ marginTop: responsivePadding.sm * 3 }]}>
+                  <View style={[twrnc`flex-row justify-between items-center`, { marginBottom: responsivePadding.sm * 2 }]}>
+                    <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.sm }]}>Progress</CustomText>
+                    <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.sm }]}>
                       {Math.round(getDisplayQuestProgress(activeQuest) * 100)}%
                     </CustomText>
                   </View>
-                  <View style={twrnc`h-3 bg-[#3A3F4B] rounded-full overflow-hidden`}>
+                  <View style={[twrnc`bg-[#3A3F4B] rounded-full overflow-hidden`, { height: responsivePadding.sm * 3 }]}>
                     <View
                       style={[
-                        twrnc`h-3 rounded-full`,
+                        twrnc`rounded-full`,
                         {
                           width: `${getDisplayQuestProgress(activeQuest) * 100}%`,
                           backgroundColor: getQuestStatus(activeQuest) === "completed" ? "#06D6A0" : "#FFC107",
+                          height: responsivePadding.sm * 3
                         },
                       ]}
                     />
                   </View>
-                  <View style={twrnc`flex-row justify-between items-center mt-2`}>
-                    <CustomText style={twrnc`text-gray-400 text-xs`}>
+                  <View style={[twrnc`flex-row justify-between items-center`, { marginTop: responsivePadding.sm * 2 }]}>
+                    <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.xs }]}>
                       Current:{" "}
                       {activeQuest.unit === "steps"
                         ? `${getCurrentQuestValue(activeQuest).toLocaleString()} steps`
@@ -1202,7 +1383,7 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
                             ? `${getCurrentQuestValue(activeQuest)} min`
                             : `${getCurrentQuestValue(activeQuest).toFixed(2)} km`}
                     </CustomText>
-                    <CustomText style={twrnc`text-gray-400 text-xs`}>
+                    <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.xs }]}>
                       Goal:{" "}
                       {activeQuest.unit === "steps"
                         ? `${activeQuest.goal.toLocaleString()} steps`
@@ -1214,10 +1395,17 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
                     </CustomText>
                   </View>
                 </View>
+                
                 {getQuestStatus(activeQuest) === "completed" && (
-                  <View style={twrnc`mt-4 bg-[#06D6A0] bg-opacity-20 rounded-xl p-3 flex-row items-center`}>
-                    <Ionicons name="checkmark-circle" size={20} color="#06D6A0" style={twrnc`mr-2`} />
-                    <CustomText weight="bold" style={twrnc`text-[#06D6A0] text-sm`}>
+                  <View style={[
+                    twrnc`bg-[#06D6A0] bg-opacity-20 rounded-xl flex-row items-center`,
+                    { 
+                      marginTop: responsivePadding.base * 4,
+                      padding: responsivePadding.sm * 3
+                    }
+                  ]}>
+                    <Ionicons name="checkmark-circle" size={responsiveSizes.iconMedium} color="#06D6A0" style={[{ marginRight: responsivePadding.sm * 2 }]} />
+                    <CustomText weight="bold" style={[twrnc`text-[#06D6A0]`, { fontSize: responsiveFontSizes.sm }]}>
                       Quest Completed! Great job!
                     </CustomText>
                   </View>
@@ -1226,12 +1414,13 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
             </Animated.View>
           </View>
         )}
-        {/* Activity Selection */}
+
+        {/* Responsive Activity Selection */}
         {!showSettings && (
-          <View style={twrnc`px-5 mb-6`}>
-            <View style={twrnc`flex-row items-center mb-4`}>
-              <Ionicons name="fitness" size={20} color="#FFFFFF" style={twrnc`mr-2`} />
-              <CustomText weight="bold" style={twrnc`text-white text-lg`}>
+          <View style={[{ paddingHorizontal: responsivePadding.base * 5, marginBottom: responsivePadding.lg * 6 }]}>
+            <View style={[twrnc`flex-row items-center`, { marginBottom: responsivePadding.base * 4 }]}>
+              <Ionicons name="fitness" size={responsiveSizes.iconMedium} color="#FFFFFF" style={[{ marginRight: responsivePadding.sm * 2 }]} />
+              <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.lg }]}>
                 Choose Activity
               </CustomText>
             </View>
@@ -1240,12 +1429,14 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
                 <TouchableOpacity
                   key={activity.id}
                   style={[
-                    twrnc`rounded-2xl p-4 items-center mb-4 shadow-md`,
+                    twrnc`rounded-2xl items-center shadow-md`,
                     {
                       backgroundColor: selectedActivity === activity.id ? activity.color : "#2A2E3A",
-                      width: width < 350 ? "100%" : "48%",
+                      width: isSmallDevice ? "100%" : "48%",
                       borderWidth: selectedActivity === activity.id ? 2 : 0,
                       borderColor: selectedActivity === activity.id ? "#FFFFFF" : "transparent",
+                      padding: responsivePadding.base * 4,
+                      marginBottom: responsivePadding.base * 4
                     },
                   ]}
                   onPress={() => {
@@ -1260,13 +1451,20 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
                     source={activity.icon}
                     resizeMode="contain"
                     style={[
-                      twrnc`w-10 h-10 mb-2`,
-                      { tintColor: selectedActivity === activity.id ? activity.iconColor : "#FFFFFF" },
+                      { 
+                        tintColor: selectedActivity === activity.id ? activity.iconColor : "#FFFFFF",
+                        width: responsiveSizes.iconXL + 8,
+                        height: responsiveSizes.iconXL + 8,
+                        marginBottom: responsivePadding.sm * 2
+                      }
                     ]}
                   />
                   <CustomText
                     weight="medium"
-                    style={{ color: selectedActivity === activity.id ? activity.iconColor : "#FFFFFF" }}
+                    style={{ 
+                      color: selectedActivity === activity.id ? activity.iconColor : "#FFFFFF",
+                      fontSize: responsiveFontSizes.base
+                    }}
                   >
                     {activity.name}
                   </CustomText>
@@ -1275,105 +1473,151 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
             </View>
           </View>
         )}
-        {/* Settings Section */}
+
+        {/* Responsive Settings Section */}
         {showSettings && (
-          <View style={twrnc`px-5 mb-6`}>
-            <View style={twrnc`flex-row items-center mb-4`}>
-              <Ionicons name="options-outline" size={20} color="#FFFFFF" style={twrnc`mr-2`} />
-              <CustomText weight="bold" style={twrnc`text-white text-lg`}>
+          <View style={[{ paddingHorizontal: responsivePadding.base * 5, marginBottom: responsivePadding.lg * 6 }]}>
+            <View style={[twrnc`flex-row items-center`, { marginBottom: responsivePadding.base * 4 }]}>
+              <Ionicons name="options-outline" size={responsiveSizes.iconMedium} color="#FFFFFF" style={[{ marginRight: responsivePadding.sm * 2 }]} />
+              <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.lg }]}>
                 Activity Settings
               </CustomText>
             </View>
-            <View style={twrnc`bg-[#2A2E3A] rounded-2xl mb-4 shadow-sm overflow-hidden`}>
+            <View style={[twrnc`bg-[#2A2E3A] rounded-2xl shadow-sm overflow-hidden`, { marginBottom: responsivePadding.base * 4 }]}>
               {isStrengthActivity ? (
                 <>
-                  <View style={twrnc`p-4 border-b border-[#3A3F4B]`}>
+                  <View style={[twrnc`border-b border-[#3A3F4B]`, { padding: responsivePadding.base * 4 }]}>
                     <View style={twrnc`flex-row justify-between items-center`}>
                       <View style={twrnc`flex-row items-center`}>
-                        <Ionicons name="fitness-outline" size={20} color="#FFFFFF" style={twrnc`mr-3`} />
-                        <CustomText weight="medium" style={twrnc`text-white`}>
+                        <Ionicons name="fitness-outline" size={responsiveSizes.iconMedium} color="#FFFFFF" style={[{ marginRight: responsivePadding.sm * 3 }]} />
+                        <CustomText weight="medium" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.base }]}>
                           Rep Goal
                         </CustomText>
                       </View>
                       <View style={twrnc`flex-row items-center`}>
                         <TextInput
-                          style={twrnc`text-white text-base bg-[#3A3F4B] rounded-l px-3 py-2 w-16 text-right`}
+                          style={[
+                            twrnc`text-white bg-[#3A3F4B] rounded-l text-right`,
+                            { 
+                              fontSize: responsiveFontSizes.base,
+                              paddingHorizontal: responsivePadding.sm * 3,
+                              paddingVertical: responsivePadding.sm * 2,
+                              width: isSmallDevice ? 60 : 64
+                            }
+                          ]}
                           value={repGoal.toString()}
                           onChangeText={handleRepGoalChange}
                           keyboardType="numeric"
                           placeholder="20"
                           placeholderTextColor="#888"
                         />
-                        <View style={twrnc`bg-[#3A3F4B] rounded-r px-2 py-2`}>
-                          <CustomText style={twrnc`text-gray-400`}>reps</CustomText>
+                        <View style={[
+                          twrnc`bg-[#3A3F4B] rounded-r`,
+                          { 
+                            paddingHorizontal: responsivePadding.sm * 2,
+                            paddingVertical: responsivePadding.sm * 2
+                          }
+                        ]}>
+                          <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.sm }]}>reps</CustomText>
                         </View>
                       </View>
                     </View>
-                    <CustomText style={twrnc`text-gray-400 text-xs mt-2 ml-8`}>
+                    <CustomText style={[
+                      twrnc`text-gray-400`,
+                      { 
+                        fontSize: responsiveFontSizes.xs,
+                        marginTop: responsivePadding.sm * 2,
+                        marginLeft: responsivePadding.xl * 8
+                      }
+                    ]}>
                       Set a target number of repetitions
                     </CustomText>
                   </View>
                 </>
               ) : (
                 <>
-                  <View style={twrnc`p-4 border-b border-[#3A3F4B]`}>
+                  <View style={[twrnc`border-b border-[#3A3F4B]`, { padding: responsivePadding.base * 4 }]}>
                     <View style={twrnc`flex-row justify-between items-center`}>
                       <View style={twrnc`flex-row items-center`}>
-                        <Ionicons name="map-outline" size={20} color="#FFFFFF" style={twrnc`mr-3`} />
-                        <CustomText weight="medium" style={twrnc`text-white`}>
+                        <Ionicons name="map-outline" size={responsiveSizes.iconMedium} color="#FFFFFF" style={[{ marginRight: responsivePadding.sm * 3 }]} />
+                        <CustomText weight="medium" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.base }]}>
                           Target Distance
                         </CustomText>
                       </View>
                       <View style={twrnc`flex-row items-center`}>
                         <TextInput
-                          style={twrnc`text-white text-base bg-[#3A3F4B] rounded-l px-3 py-2 w-16 text-right`}
+                          style={[
+                            twrnc`text-white bg-[#3A3F4B] rounded-l text-right`,
+                            { 
+                              fontSize: responsiveFontSizes.base,
+                              paddingHorizontal: responsivePadding.sm * 3,
+                              paddingVertical: responsivePadding.sm * 2,
+                              width: isSmallDevice ? 60 : 64
+                            }
+                          ]}
                           value={distance}
                           onChangeText={handleDistanceChange}
                           keyboardType="numeric"
                           placeholder="0.00"
                           placeholderTextColor="#888"
                         />
-                        <View style={twrnc`bg-[#3A3F4B] rounded-r px-2 py-2`}>
-                          <CustomText style={twrnc`text-gray-400`}>km</CustomText>
+                        <View style={[
+                          twrnc`bg-[#3A3F4B] rounded-r`,
+                          { 
+                            paddingHorizontal: responsivePadding.sm * 2,
+                            paddingVertical: responsivePadding.sm * 2
+                          }
+                        ]}>
+                          <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.sm }]}>km</CustomText>
                         </View>
                       </View>
                     </View>
                   </View>
-                  <View style={twrnc`p-4 border-b border-[#3A3F4B]`}>
-                    <View style={twrnc`flex-row justify-between items-center mb-3`}>
+                  
+                  <View style={[twrnc`border-b border-[#3A3F4B]`, { padding: responsivePadding.base * 4 }]}>
+                    <View style={[twrnc`flex-row justify-between items-center`, { marginBottom: responsivePadding.sm * 3 }]}>
                       <View style={twrnc`flex-row items-center`}>
-                        <Ionicons name="time-outline" size={20} color="#FFFFFF" style={twrnc`mr-3`} />
-                        <CustomText weight="medium" style={twrnc`text-white`}>
+                        <Ionicons name="time-outline" size={responsiveSizes.iconMedium} color="#FFFFFF" style={[{ marginRight: responsivePadding.sm * 3 }]} />
+                        <CustomText weight="medium" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.base }]}>
                           Target Duration
                         </CustomText>
                       </View>
                     </View>
-                    <View style={twrnc`flex-row flex-wrap justify-between ml-8`}>
+                    <View style={[
+                      twrnc`flex-row flex-wrap justify-between`,
+                      { marginLeft: responsivePadding.xl * 8 }
+                    ]}>
                       {[10, 20, 30, 45, 60, 90].map((mins) => (
                         <TouchableOpacity
                           key={mins}
                           style={[
-                            twrnc`w-[30%] mb-3 py-2 rounded-lg items-center`,
-                            time === mins.toString()
-                              ? { backgroundColor: currentActivity.color }
-                              : { backgroundColor: "#3A3F4B" },
+                            twrnc`items-center rounded-lg`,
+                            {
+                              width: isSmallDevice ? "48%" : "30%",
+                              marginBottom: responsivePadding.sm * 3,
+                              paddingVertical: responsivePadding.sm * 2,
+                              backgroundColor: time === mins.toString() ? currentActivity.color : "#3A3F4B"
+                            }
                           ]}
                           onPress={() => setTime(mins.toString())}
                         >
-                          <CustomText style={twrnc`text-white`}>{mins} min</CustomText>
+                          <CustomText style={[twrnc`text-white`, { fontSize: responsiveFontSizes.sm }]}>
+                            {mins} min
+                          </CustomText>
                         </TouchableOpacity>
                       ))}
                     </View>
                   </View>
-                  <View style={twrnc`p-4 border-b border-[#3A3F4B]`}>
+                  
+                  <View style={[twrnc`border-b border-[#3A3F4B]`, { padding: responsivePadding.base * 4 }]}>
                     <View style={twrnc`flex-row justify-between items-center`}>
                       <View style={twrnc`flex-row items-center`}>
-                        <Ionicons name="location-outline" size={20} color="#FFFFFF" style={twrnc`mr-3`} />
+                        <Ionicons name="location-outline" size={responsiveSizes.iconMedium} color="#FFFFFF" style={[{ marginRight: responsivePadding.sm * 3 }]} />
                         <View>
-                          <CustomText weight="medium" style={twrnc`text-white`}>
+                          <CustomText weight="medium" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.base }]}>
                             GPS Tracking
                           </CustomText>
-                          <CustomText style={twrnc`text-gray-400 text-xs mt-1`}>
+                          <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.xs, marginTop: responsivePadding.xs }]}>
                             Required for accurate tracking
                           </CustomText>
                         </View>
@@ -1389,16 +1633,23 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
                   </View>
                 </>
               )}
-              <View style={twrnc`p-4`}>
+              
+              <View style={[{ padding: responsivePadding.base * 4 }]}>
                 <View style={twrnc`flex-row justify-between items-center`}>
                   <View style={twrnc`flex-row items-center`}>
-                    <Ionicons name="flame-outline" size={20} color="#FFFFFF" style={twrnc`mr-3`} />
-                    <CustomText weight="medium" style={twrnc`text-white`}>
+                    <Ionicons name="flame-outline" size={responsiveSizes.iconMedium} color="#FFFFFF" style={[{ marginRight: responsivePadding.sm * 3 }]} />
+                    <CustomText weight="medium" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.base }]}>
                       Estimated Calories
                     </CustomText>
                   </View>
-                  <View style={twrnc`bg-[#FFC107] rounded px-3 py-1`}>
-                    <CustomText weight="semibold" style={twrnc`text-[#121826]`}>
+                  <View style={[
+                    twrnc`bg-[#FFC107] rounded`,
+                    { 
+                      paddingHorizontal: responsivePadding.sm * 3,
+                      paddingVertical: responsivePadding.xs
+                    }
+                  ]}>
+                    <CustomText weight="semibold" style={[twrnc`text-[#121826]`, { fontSize: responsiveFontSizes.sm }]}>
                       {calories} kcal
                     </CustomText>
                   </View>
@@ -1407,64 +1658,74 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
             </View>
           </View>
         )}
-        {/* Current Progress */}
+
+        {/* Responsive Current Progress */}
         {(coordinates.length > 0 || (isStrengthActivity && stats.reps > 0)) && (
-          <View style={twrnc`px-5 mb-6`}>
-            <View style={twrnc`flex-row items-center mb-4`}>
-              <Ionicons name="stats-chart" size={20} color="#FFFFFF" style={twrnc`mr-2`} />
-              <CustomText weight="bold" style={twrnc`text-white text-lg`}>
+          <View style={[{ paddingHorizontal: responsivePadding.base * 5, marginBottom: responsivePadding.lg * 6 }]}>
+            <View style={[twrnc`flex-row items-center`, { marginBottom: responsivePadding.base * 4 }]}>
+              <Ionicons name="stats-chart" size={responsiveSizes.iconMedium} color="#FFFFFF" style={[{ marginRight: responsivePadding.sm * 2 }]} />
+              <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.lg }]}>
                 Current Progress
               </CustomText>
             </View>
-            <View style={twrnc`bg-[#2A2E3A] rounded-2xl p-4 shadow-md`}>
+            <View style={[
+              twrnc`bg-[#2A2E3A] rounded-2xl shadow-md`,
+              { padding: responsivePadding.base * 4 }
+            ]}>
               {isStrengthActivity ? (
-                <View style={twrnc`flex-row justify-between mb-4`}>
+                <View style={[twrnc`flex-row justify-between`, { marginBottom: responsivePadding.base * 4 }]}>
                   <View style={twrnc`items-center flex-1`}>
-                    <CustomText style={twrnc`text-gray-400 text-xs mb-1`}>Reps</CustomText>
-                    <CustomText weight="bold" style={twrnc`text-white text-xl`}>
+                    <CustomText style={[twrnc`text-gray-400 mb-1`, { fontSize: responsiveFontSizes.xs }]}>Reps</CustomText>
+                    <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.xl }]}>
                       {stats.reps || 0}
                     </CustomText>
-                    <CustomText style={twrnc`text-gray-400 text-xs`}>completed</CustomText>
+                    <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.xs }]}>completed</CustomText>
                   </View>
-                  <View style={twrnc`items-center flex-1 border-l border-r border-[#3A3F4B] px-2`}>
-                    <CustomText style={twrnc`text-gray-400 text-xs mb-1`}>Duration</CustomText>
-                    <CustomText weight="bold" style={twrnc`text-white text-xl`}>
+                  <View style={[
+                    twrnc`items-center flex-1 border-l border-r border-[#3A3F4B]`,
+                    { paddingHorizontal: responsivePadding.sm * 2 }
+                  ]}>
+                    <CustomText style={[twrnc`text-gray-400 mb-1`, { fontSize: responsiveFontSizes.xs }]}>Duration</CustomText>
+                    <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.xl }]}>
                       {formatDuration(stats.duration || 0)}
                     </CustomText>
-                    <CustomText style={twrnc`text-gray-400 text-xs`}>time</CustomText>
+                    <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.xs }]}>time</CustomText>
                   </View>
                   <View style={twrnc`items-center flex-1`}>
-                    <CustomText style={twrnc`text-gray-400 text-xs mb-1`}>Calories</CustomText>
-                    <CustomText weight="bold" style={twrnc`text-white text-xl`}>
+                    <CustomText style={[twrnc`text-gray-400 mb-1`, { fontSize: responsiveFontSizes.xs }]}>Calories</CustomText>
+                    <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.xl }]}>
                       {calories}
                     </CustomText>
-                    <CustomText style={twrnc`text-gray-400 text-xs`}>kcal</CustomText>
+                    <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.xs }]}>kcal</CustomText>
                   </View>
                 </View>
               ) : (
-                <View style={twrnc`flex-row justify-between mb-4`}>
+                <View style={[twrnc`flex-row justify-between`, { marginBottom: responsivePadding.base * 4 }]}>
                   <View style={twrnc`items-center flex-1`}>
-                    <CustomText style={twrnc`text-gray-400 text-xs mb-1`}>Distance</CustomText>
-                    <CustomText weight="bold" style={twrnc`text-white text-xl`}>
+                    <CustomText style={[twrnc`text-gray-400 mb-1`, { fontSize: responsiveFontSizes.xs }]}>Distance</CustomText>
+                    <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.xl }]}>
                       {(stats.distance / 1000).toFixed(2)}
                     </CustomText>
-                    <CustomText style={twrnc`text-gray-400 text-xs`}>km</CustomText>
+                    <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.xs }]}>km</CustomText>
                   </View>
-                  <View style={twrnc`items-center flex-1 border-l border-r border-[#3A3F4B] px-2`}>
-                    <CustomText style={twrnc`text-gray-400 text-xs mb-1`}>Duration</CustomText>
-                    <CustomText weight="bold" style={twrnc`text-white text-xl`}>
+                  <View style={[
+                    twrnc`items-center flex-1 border-l border-r border-[#3A3F4B]`,
+                    { paddingHorizontal: responsivePadding.sm * 2 }
+                  ]}>
+                    <CustomText style={[twrnc`text-gray-400 mb-1`, { fontSize: responsiveFontSizes.xs }]}>Duration</CustomText>
+                    <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.xl }]}>
                       {formatDuration(stats.duration || 0)}
                     </CustomText>
-                    <CustomText style={twrnc`text-gray-400 text-xs`}>time</CustomText>
+                    <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.xs }]}>time</CustomText>
                   </View>
                   <View style={twrnc`items-center flex-1`}>
-                    <CustomText style={twrnc`text-gray-400 text-xs mb-1`}>
+                    <CustomText style={[twrnc`text-gray-400 mb-1`, { fontSize: responsiveFontSizes.xs }]}>
                       {selectedActivity === "cycling" ? "Speed" : "Steps"}
                     </CustomText>
-                    <CustomText weight="bold" style={twrnc`text-white text-xl`}>
+                    <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.xl }]}>
                       {selectedActivity === "cycling" ? stats.avgSpeed.toFixed(1) : stats.steps.toLocaleString()}
                     </CustomText>
-                    <CustomText style={twrnc`text-gray-400 text-xs`}>
+                    <CustomText style={[twrnc`text-gray-400`, { fontSize: responsiveFontSizes.xs }]}>
                       {selectedActivity === "cycling" ? "km/h" : "steps"}
                     </CustomText>
                   </View>
@@ -1473,65 +1734,105 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
             </View>
           </View>
         )}
-        {/* Tips Section */}
-        <View style={twrnc`px-5 mb-10`}>
-          <View style={twrnc`flex-row items-center mb-4`}>
-            <Ionicons name="bulb-outline" size={20} color="#FFFFFF" style={twrnc`mr-2`} />
-            <CustomText weight="bold" style={twrnc`text-white text-lg`}>
+
+        {/* Responsive Tips Section */}
+        <View style={[{ paddingHorizontal: responsivePadding.base * 5, marginBottom: responsivePadding.xl * 10 }]}>
+          <View style={[twrnc`flex-row items-center`, { marginBottom: responsivePadding.base * 4 }]}>
+            <Ionicons name="bulb-outline" size={responsiveSizes.iconMedium} color="#FFFFFF" style={[{ marginRight: responsivePadding.sm * 2 }]} />
+            <CustomText weight="bold" style={[twrnc`text-white`, { fontSize: responsiveFontSizes.lg }]}>
               Tips
             </CustomText>
           </View>
-          <View style={twrnc`bg-[#2A2E3A] rounded-2xl p-4 shadow-md`}>
+          <View style={[
+            twrnc`bg-[#2A2E3A] rounded-2xl shadow-md`,
+            { padding: responsivePadding.base * 4 }
+          ]}>
             {isStrengthActivity ? (
               <>
-                <View style={twrnc`flex-row items-start mb-3`}>
-                  <View style={twrnc`bg-[${currentActivity.color}] rounded-full p-1 mr-3 mt-0.5`}>
-                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                <View style={[twrnc`flex-row items-start`, { marginBottom: responsivePadding.sm * 3 }]}>
+                  <View style={[
+                    twrnc`bg-[${currentActivity.color}] rounded-full mr-3`,
+                    { 
+                      padding: responsivePadding.xs,
+                      marginTop: responsivePadding.xs / 2
+                    }
+                  ]}>
+                    <Ionicons name="checkmark" size={responsiveSizes.iconSmall - 2} color="#FFFFFF" />
                   </View>
-                  <CustomText style={twrnc`text-gray-300 text-sm flex-1`}>
+                  <CustomText style={[twrnc`text-gray-300 flex-1`, { fontSize: responsiveFontSizes.sm }]}>
                     Keep your phone in your pocket or hold it while exercising for better motion detection
                   </CustomText>
                 </View>
-                <View style={twrnc`flex-row items-start mb-3`}>
-                  <View style={twrnc`bg-[${currentActivity.color}] rounded-full p-1 mr-3 mt-0.5`}>
-                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                <View style={[twrnc`flex-row items-start`, { marginBottom: responsivePadding.sm * 3 }]}>
+                  <View style={[
+                    twrnc`bg-[${currentActivity.color}] rounded-full mr-3`,
+                    { 
+                      padding: responsivePadding.xs,
+                      marginTop: responsivePadding.xs / 2
+                    }
+                  ]}>
+                    <Ionicons name="checkmark" size={responsiveSizes.iconSmall - 2} color="#FFFFFF" />
                   </View>
-                  <CustomText style={twrnc`text-gray-300 text-sm flex-1`}>
+                  <CustomText style={[twrnc`text-gray-300 flex-1`, { fontSize: responsiveFontSizes.sm }]}>
                     You can tap the + button to manually count reps if automatic detection isn't working
                   </CustomText>
                 </View>
                 <View style={twrnc`flex-row items-start`}>
-                  <View style={twrnc`bg-[${currentActivity.color}] rounded-full p-1 mr-3 mt-0.5`}>
-                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                  <View style={[
+                    twrnc`bg-[${currentActivity.color}] rounded-full mr-3`,
+                    { 
+                      padding: responsivePadding.xs,
+                      marginTop: responsivePadding.xs / 2
+                    }
+                  ]}>
+                    <Ionicons name="checkmark" size={responsiveSizes.iconSmall - 2} color="#FFFFFF" />
                   </View>
-                  <CustomText style={twrnc`text-gray-300 text-sm flex-1`}>
+                  <CustomText style={[twrnc`text-gray-300 flex-1`, { fontSize: responsiveFontSizes.sm }]}>
                     Complete your quest goals to earn XP and track your fitness progress
                   </CustomText>
                 </View>
               </>
             ) : (
               <>
-                <View style={twrnc`flex-row items-start mb-3`}>
-                  <View style={twrnc`bg-[${currentActivity.color}] rounded-full p-1 mr-3 mt-0.5`}>
-                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                <View style={[twrnc`flex-row items-start`, { marginBottom: responsivePadding.sm * 3 }]}>
+                  <View style={[
+                    twrnc`bg-[${currentActivity.color}] rounded-full mr-3`,
+                    { 
+                      padding: responsivePadding.xs,
+                      marginTop: responsivePadding.xs / 2
+                    }
+                  ]}>
+                    <Ionicons name="checkmark" size={responsiveSizes.iconSmall - 2} color="#FFFFFF" />
                   </View>
-                  <CustomText style={twrnc`text-gray-300 text-sm flex-1`}>
+                  <CustomText style={[twrnc`text-gray-300 flex-1`, { fontSize: responsiveFontSizes.sm }]}>
                     Keep your phone in an accessible position for better GPS accuracy
                   </CustomText>
                 </View>
-                <View style={twrnc`flex-row items-start mb-3`}>
-                  <View style={twrnc`bg-[${currentActivity.color}] rounded-full p-1 mr-3 mt-0.5`}>
-                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                <View style={[twrnc`flex-row items-start`, { marginBottom: responsivePadding.sm * 3 }]}>
+                  <View style={[
+                    twrnc`bg-[${currentActivity.color}] rounded-full mr-3`,
+                    { 
+                      padding: responsivePadding.xs,
+                      marginTop: responsivePadding.xs / 2
+                    }
+                  ]}>
+                    <Ionicons name="checkmark" size={responsiveSizes.iconSmall - 2} color="#FFFFFF" />
                   </View>
-                  <CustomText style={twrnc`text-gray-300 text-sm flex-1`}>
+                  <CustomText style={[twrnc`text-gray-300 flex-1`, { fontSize: responsiveFontSizes.sm }]}>
                     You can set optional goals or just start tracking without any targets
                   </CustomText>
                 </View>
                 <View style={twrnc`flex-row items-start`}>
-                  <View style={twrnc`bg-[${currentActivity.color}] rounded-full p-1 mr-3 mt-0.5`}>
-                    <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                  <View style={[
+                    twrnc`bg-[${currentActivity.color}] rounded-full mr-3`,
+                    { 
+                      padding: responsivePadding.xs,
+                      marginTop: responsivePadding.xs / 2
+                    }
+                  ]}>
+                    <Ionicons name="checkmark" size={responsiveSizes.iconSmall - 2} color="#FFFFFF" />
                   </View>
-                  <CustomText style={twrnc`text-gray-300 text-sm flex-1`}>
+                  <CustomText style={[twrnc`text-gray-300 flex-1`, { fontSize: responsiveFontSizes.sm }]}>
                     Complete quests from the Dashboard to earn XP and track your fitness journey
                   </CustomText>
                 </View>
@@ -1540,23 +1841,36 @@ const ActivityScreen = ({ navigateToDashboard, navigateToMap, params = {} }) => 
           </View>
         </View>
       </ScrollView>
-      {/* Floating Action Button for small devices */}
+
+      {/* Responsive Floating Action Button for small devices */}
       {!coordinates.length > 0 && !sensorSubscription && isSmallDevice && (
-        <View style={twrnc`absolute bottom-6 right-6`}>
+        <View style={[
+          twrnc`absolute`,
+          { 
+            bottom: responsivePadding.lg * 6,
+            right: responsivePadding.lg * 6
+          }
+        ]}>
           <TouchableOpacity
             style={[
-              twrnc`w-16 h-16 rounded-full items-center justify-center shadow-lg`,
-              { backgroundColor: currentActivity.color, shadowColor: currentActivity.color },
+              twrnc`rounded-full items-center justify-center shadow-lg`,
+              {
+                backgroundColor: currentActivity.color,
+                shadowColor: currentActivity.color,
+                width: responsiveSizes.activityIcon + 8,
+                height: responsiveSizes.activityIcon + 8
+              },
               isTrackingLoading && twrnc`opacity-60`,
             ]}
             onPress={startActivity}
             disabled={isTrackingLoading}
           >
-            <Ionicons name="play" size={30} color="#FFFFFF" />
+            <Ionicons name="play" size={responsiveSizes.iconXL} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
       )}
     </View>
   )
 }
+
 export default ActivityScreen

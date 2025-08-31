@@ -17,6 +17,7 @@ import twrnc from "twrnc"
 import CustomText from "../components/CustomText"
 import CustomModal from "../components/CustomModal"
 import { auth } from "../firebaseConfig"
+import NotificationService from "../services/NotificationService"
 import { signInWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "firebase/auth"
 import { FontAwesome, Ionicons } from "@expo/vector-icons"
 import { LinearGradient } from "expo-linear-gradient"
@@ -68,12 +69,10 @@ const LoginScreen = ({ navigateToLanding, navigateToSignUp, navigateToDashboard,
   }, [prefilledEmail])
 
   const animateScreenElements = () => {
-    // Reset animation values
     fadeAnim.setValue(0)
     slideAnim.setValue(50)
     headerSlideAnim.setValue(-50)
 
-    // Start animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -168,8 +167,11 @@ const LoginScreen = ({ navigateToLanding, navigateToSignUp, navigateToDashboard,
         setModalType("warning")
         setModalVisible(true)
         setUserForVerification(user)
+        await NotificationService.sendVerifyAccountNotification()
       } else {
         navigateToDashboard()
+        const displayName = user.displayName || user.email.split("@")[0]
+        await NotificationService.sendWelcomeBackNotification(displayName)
       }
     } catch (error) {
       setModalTitle("Login Failed")
@@ -265,71 +267,59 @@ const LoginScreen = ({ navigateToLanding, navigateToSignUp, navigateToDashboard,
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={twrnc`flex-1 bg-[#121826] p-5`}
+      style={twrnc`flex-1 bg-[#121826]`}
     >
-      <ScrollView contentContainerStyle={twrnc`flex-grow`} keyboardShouldPersistTaps="handled">
-        {/* Header */}
-        <Animated.View style={[twrnc` items-center mb-6`, { transform: [{ translateY: headerSlideAnim }], opacity: fadeAnim }]}>
-          <View style={twrnc`flex-1 items-center`}>
-            <CustomText weight="medium" style={twrnc`text-white ${isSmallDevice ? "text-lg" : "text-xl"}`}>
-              Sign In
-            </CustomText>
-          </View>
-          <View style={twrnc`w-10`} />
+      {/* ScrollView with flex: 1 */}
+      <ScrollView contentContainerStyle={twrnc`flex-1`}>
+        {/* Fixed Header at the top, absolutely positioned */}
+        <Animated.View
+          style={[
+            twrnc`absolute top-0 left-0 right-0 items-center pt-8 z-10`,
+            { transform: [{ translateY: headerSlideAnim }], opacity: fadeAnim }
+          ]}
+        >
+          <CustomText
+            weight="medium"
+            style={twrnc`text-white ${isSmallDevice ? "text-lg" : "text-xl"}`}
+          >
+            Sign In
+          </CustomText>
         </Animated.View>
 
-        <Animated.View style={[twrnc`flex-1`, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        {/* Content container with paddingTop to avoid overlap with header */}
+        <View style={[twrnc`flex-1`, { paddingTop: 80, justifyContent: "center", alignItems: "center" }]}>
           {/* Welcome Section */}
           <View style={twrnc`mb-8`}>
-            <CustomText weight="bold" style={twrnc`text-white ${isSmallDevice ? "text-3xl" : "text-4xl"} mb-2`}>
+            <CustomText
+              weight="bold"
+              style={twrnc`text-white ${isSmallDevice ? "text-3xl" : "text-4xl"} mb-2`}
+            >
               Welcome Back
             </CustomText>
-            <CustomText style={twrnc`text-[#8E8E93] ${isSmallDevice ? "text-sm" : "text-base"}`}>
+            <CustomText
+              style={twrnc`text-[#8E8E93] ${isSmallDevice ? "text-sm" : "text-base"}`}
+            >
               Sign in to your HakbangQuest account
             </CustomText>
           </View>
 
-          {/* Registered Emails Section */}
-          {registeredEmails.length > 0 && (
-            <View style={twrnc`mb-6`}>
-              <CustomText weight="medium" style={twrnc`text-white mb-3 ${isSmallDevice ? "text-sm" : "text-base"}`}>
-                Quick Sign In
-              </CustomText>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {registeredEmails.map((emailItem, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    style={twrnc`bg-[#1E2538] p-3 rounded-xl mr-3 border border-gray-700`}
-                    onPress={() => handleSelectEmail(emailItem)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={twrnc`flex-row items-center`}>
-                      <View style={twrnc`bg-[#4361EE] p-2 rounded-full mr-3`}>
-                        <FontAwesome name="user" size={14} color="white" />
-                      </View>
-                      <CustomText style={twrnc`text-white ${isSmallDevice ? "text-xs" : "text-sm"}`}>
-                        {emailItem}
-                      </CustomText>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
           {/* Login Form */}
-          <Animated.View style={[twrnc`mb-6`, { transform: [{ translateX: inputShakeAnim }] }]}>
+          <Animated.View
+            style={[twrnc`w-full px-4 mb-6`, { transform: [{ translateX: inputShakeAnim }] }]}
+          >
             {/* Email Input */}
             <View style={twrnc`mb-4`}>
-              <CustomText weight="medium" style={twrnc`text-white mb-2 ${isSmallDevice ? "text-sm" : "text-base"}`}>
+              <CustomText
+                weight="medium"
+                style={twrnc`text-white mb-2 ${isSmallDevice ? "text-sm" : "text-base"}`}
+              >
                 Email Address
               </CustomText>
               <View style={twrnc`relative`}>
                 <TextInput
                   style={[
-                    twrnc`bg-[#1E2538] rounded-xl p-4 text-white ${
-                      isEmailFocused ? "border-2 border-[#4361EE]" : "border border-gray-600"
-                    } ${errors.email ? "border-red-500" : ""}`,
+                    twrnc`bg-[#1E2538] rounded-xl p-4 text-white ${isEmailFocused ? "border-2 border-[#4361EE]" : "border border-gray-600"
+                      } ${errors.email ? "border-red-500" : ""}`,
                     { fontFamily: "Poppins-Regular", fontSize: isSmallDevice ? 14 : 16 },
                   ]}
                   placeholder="Enter your email"
@@ -357,15 +347,17 @@ const LoginScreen = ({ navigateToLanding, navigateToSignUp, navigateToDashboard,
 
             {/* Password Input */}
             <View style={twrnc`mb-6`}>
-              <CustomText weight="medium" style={twrnc`text-white mb-2 ${isSmallDevice ? "text-sm" : "text-base"}`}>
+              <CustomText
+                weight="medium"
+                style={twrnc`text-white mb-2 ${isSmallDevice ? "text-sm" : "text-base"}`}
+              >
                 Password
               </CustomText>
               <View style={twrnc`relative`}>
                 <TextInput
                   style={[
-                    twrnc`bg-[#1E2538] rounded-xl p-4 pr-12 text-white ${
-                      isPasswordFocused ? "border-2 border-[#4361EE]" : "border border-gray-600"
-                    } ${errors.password ? "border-red-500" : ""}`,
+                    twrnc`bg-[#1E2538] rounded-xl p-4 pr-12 text-white ${isPasswordFocused ? "border-2 border-[#4361EE]" : "border border-gray-600"
+                      } ${errors.password ? "border-red-500" : ""}`,
                     { fontFamily: "Poppins-Regular", fontSize: isSmallDevice ? 14 : 16 },
                   ]}
                   placeholder="Enter your password"
@@ -384,7 +376,11 @@ const LoginScreen = ({ navigateToLanding, navigateToSignUp, navigateToDashboard,
                   onPress={() => setIsPasswordVisible(!isPasswordVisible)}
                   hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 >
-                  <FontAwesome name={isPasswordVisible ? "eye" : "eye-slash"} size={16} color="#8E8E93" />
+                  <FontAwesome
+                    name={isPasswordVisible ? "eye" : "eye-slash"}
+                    size={16}
+                    color="#8E8E93"
+                  />
                 </TouchableOpacity>
               </View>
               {errors.password ? (
@@ -400,9 +396,8 @@ const LoginScreen = ({ navigateToLanding, navigateToSignUp, navigateToDashboard,
             {/* Sign In Button */}
             <Animated.View style={{ transform: [{ scale: buttonScaleAnim }] }}>
               <TouchableOpacity
-                style={twrnc`bg-[#4361EE] py-4 rounded-xl items-center flex-row justify-center ${
-                  isLoading ? "opacity-70" : ""
-                }`}
+                style={twrnc`bg-[#4361EE] py-4 rounded-xl items-center flex-row justify-center ${isLoading ? "opacity-70" : ""
+                  }`}
                 onPress={handleEmailSignIn}
                 disabled={isLoading}
                 activeOpacity={0.8}
@@ -412,7 +407,10 @@ const LoginScreen = ({ navigateToLanding, navigateToSignUp, navigateToDashboard,
                 ) : (
                   <FontAwesome name="sign-in" size={18} color="white" style={twrnc`mr-2`} />
                 )}
-                <CustomText weight="bold" style={twrnc`text-white ${isSmallDevice ? "text-base" : "text-lg"}`}>
+                <CustomText
+                  weight="bold"
+                  style={twrnc`text-white ${isSmallDevice ? "text-base" : "text-lg"}`}
+                >
                   {isLoading ? "Signing In..." : "Sign In"}
                 </CustomText>
               </TouchableOpacity>
@@ -444,9 +442,9 @@ const LoginScreen = ({ navigateToLanding, navigateToSignUp, navigateToDashboard,
               </TouchableOpacity>
             </View>
           </View>
-        </Animated.View>
+        </View>
 
-        {/* Enhanced Modal */}
+        {/* Modal outside the content, remains fixed */}
         <CustomModal
           visible={modalVisible}
           onClose={handleModalClose}

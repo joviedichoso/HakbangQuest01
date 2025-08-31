@@ -26,6 +26,7 @@ import NotificationService from "../services/NotificationService"
 import {
   ACTIVITY_TYPES,
   DIFFICULTY_LEVELS,
+  CHALLENGE_GROUP_TYPES, // Import the new constant
   loadUserProfile,
   loadInitialFriends,
   loadFriendsPage,
@@ -90,8 +91,10 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
   const [newChallenge, setNewChallenge] = useState({
     title: "",
     description: "",
-    type: "Walking",
+    type: "Walking", // Activity type
     endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    groupType: "public", // New: Default to public
+    selectedFriendsForGroupChallenge: [], // New: For duo/lobby friend selection
   })
   const [friendsPage, setFriendsPage] = useState(1)
   const [hasMoreFriends, setHasMoreFriends] = useState(true)
@@ -410,43 +413,68 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
   }
 
   // Challenge handlers
-  const handleCreateChallenge = async (friendIds = []) => {
+  const handleCreateChallenge = async () => { // Removed friendIds parameter, now taken from newChallenge state
     try {
       if (!newChallenge.title.trim()) {
         showModal({
           title: "Error",
           message: "Please enter a challenge title",
           type: "error",
-        })
-        return
+        });
+        return;
       }
-      setCreatingChallenge(true)
-      const result = await createChallenge(newChallenge, friendIds)
+
+      // Validate friend selection for duo/lobby challenges
+      if (newChallenge.groupType === "duo" && newChallenge.selectedFriendsForGroupChallenge.length !== 1) {
+        showModal({
+          title: "Error",
+          message: "Duo challenges require exactly one friend.",
+          type: "error",
+        });
+        return;
+      }
+      if (newChallenge.groupType === "lobby" && (newChallenge.selectedFriendsForGroupChallenge.length === 0 || newChallenge.selectedFriendsForGroupChallenge.length > (CHALLENGE_GROUP_TYPES.find(t => t.id === "lobby").maxParticipants - 1))) {
+        showModal({
+          title: "Error",
+          message: `Lobby challenges require 1 to ${CHALLENGE_GROUP_TYPES.find(t => t.id === "lobby").maxParticipants - 1} friends.`,
+          type: "error",
+        });
+        return;
+      }
+
+      setCreatingChallenge(true);
+      const result = await createChallenge(
+        newChallenge,
+        newChallenge.selectedFriendsForGroupChallenge.map(f => f.id), // Pass only IDs
+        newChallenge.groupType // Pass the group type
+      );
       // Reset form and close modal
       setNewChallenge({
         title: "",
         description: "",
         type: "Walking",
         endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      })
-      setIsCreateChallengeModalVisible(false)
+        groupType: "public", // Reset to default
+        selectedFriendsForGroupChallenge: [], // Reset selected friends
+      });
+      setIsCreateChallengeModalVisible(false);
       // Add new challenge to state
-      setChallenges((prev) => [result.challenge, ...prev])
+      setChallenges((prev) => [result.challenge, ...prev]);
       showModal({
         title: "Success",
         message: result.message,
         type: "success",
-      })
+      });
     } catch (err) {
       showModal({
         title: "Error",
         message: err.message,
         type: "error",
-      })
+      });
     } finally {
-      setCreatingChallenge(false)
+      setCreatingChallenge(false);
     }
-  }
+  };
 
   const handleCreateCustomChallenge = async () => {
     try {
@@ -695,9 +723,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
             style={twrnc`w-14 h-14 rounded-2xl border-2 border-[#4361EE]`}
           />
           <View
-            style={twrnc`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-[#2A2E3A] ${
-              item.isOnline ? "bg-green-500" : "bg-gray-500"
-            }`}
+            style={twrnc`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-[#2A2E3A] ${item.isOnline ? "bg-green-500" : "bg-gray-500"
+              }`}
           />
         </View>
         <View style={twrnc`flex-1`}>
@@ -749,9 +776,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
             style={twrnc`w-14 h-14 rounded-2xl border-2 border-[#06D6A0]`}
           />
           <View
-            style={twrnc`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-[#2A2E3A] ${
-              item.fromUser.isOnline ? "bg-green-500" : "bg-gray-500"
-            }`}
+            style={twrnc`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-[#2A2E3A] ${item.fromUser.isOnline ? "bg-green-500" : "bg-gray-500"
+              }`}
           />
         </View>
         <View style={twrnc`flex-1`}>
@@ -765,9 +791,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
           </CustomText>
           <View style={twrnc`flex-row justify-between`}>
             <TouchableOpacity
-              style={twrnc`${
-                processingRequests[item.id] === "accepting" ? "bg-green-700" : "bg-[#06D6A0]"
-              } flex-1 py-3 rounded-xl mr-2 items-center`}
+              style={twrnc`${processingRequests[item.id] === "accepting" ? "bg-green-700" : "bg-[#06D6A0]"
+                } flex-1 py-3 rounded-xl mr-2 items-center`}
               onPress={() => handleAcceptFriendRequest(item.id, item.fromUser.id)}
               disabled={processingRequests[item.id] !== undefined}
               activeOpacity={0.8}
@@ -784,9 +809,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
               )}
             </TouchableOpacity>
             <TouchableOpacity
-              style={twrnc`${
-                processingRequests[item.id] === "rejecting" ? "bg-red-700" : "bg-[#EF4444]"
-              } flex-1 py-3 rounded-xl ml-2 items-center`}
+              style={twrnc`${processingRequests[item.id] === "rejecting" ? "bg-red-700" : "bg-[#EF4444]"
+                } flex-1 py-3 rounded-xl ml-2 items-center`}
               onPress={() => handleRejectFriendRequest(item.id)}
               disabled={processingRequests[item.id] !== undefined}
               activeOpacity={0.8}
@@ -808,97 +832,108 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
     </View>
   )
 
-  const renderChallengeItem = ({ item }) => (
-    <TouchableOpacity
-      style={twrnc`bg-[#2A2E3A] rounded-2xl p-5 mb-4 shadow-lg`}
-      onPress={() => viewChallengeDetails(item)} // Make the whole card tappable
-      activeOpacity={0.8}
-    >
-      <View style={twrnc`flex-row items-center mb-4`}>
-        <View style={twrnc`w-16 h-16 rounded-2xl bg-[#FFC10720] items-center justify-center mr-4`}>
-          {item.icon ? (
-            <Image source={{ uri: item.icon }} style={twrnc`w-10 h-10`} resizeMode="contain" />
-          ) : (
-            <Ionicons name="trophy" size={32} color="#FFC107" />
-          )}
-        </View>
-        <View style={twrnc`flex-1`}>
-          <CustomText weight="bold" style={twrnc`text-white text-lg mb-1`}>
-            {item.title}
-          </CustomText>
-          <View style={twrnc`flex-row items-center mb-2`}>
-            <View style={twrnc`bg-[#4361EE20] px-3 py-1 rounded-xl mr-2`}>
-              <CustomText style={twrnc`text-[#4361EE] text-xs font-medium`}>{item.type || "Challenge"}</CustomText>
-            </View>
-            <View style={twrnc`bg-[#06D6A020] px-3 py-1 rounded-xl`}>
-              <CustomText style={twrnc`text-[#06D6A0] text-xs font-medium`}>
-                {item.participants?.length || 0} joined
-              </CustomText>
-            </View>
-            {item.isCustomChallenge && (
-              <View style={twrnc`bg-[#9B5DE520] px-3 py-1 rounded-xl ml-2`}>
-                <CustomText style={twrnc`text-[#9B5DE5] text-xs font-medium`}>Custom</CustomText>
-              </View>
-            )}
-          </View>
-          <View style={twrnc`flex-row items-center`}>
-            <Ionicons name="time-outline" size={14} color="#FFC107" />
-            <CustomText style={twrnc`text-[#FFC107] text-xs ml-1`}>
-              {item.endDate ? `Ends ${new Date(item.endDate).toLocaleDateString()}` : "Ongoing"}
-            </CustomText>
-            {item.goal && item.unit && (
-              <>
-                <Ionicons name="flag-outline" size={14} color="#06D6A0" style={twrnc`ml-3`} />
-                <CustomText style={twrnc`text-[#06D6A0] text-xs ml-1`}>
-                  Goal: {item.goal} {item.unit}
-                </CustomText>
-              </>
-            )}
-            {item.difficulty && (
-              <>
-                <Ionicons name="flash-outline" size={14} color="#EF476F" style={twrnc`ml-3`} />
-                <CustomText style={twrnc`text-[#EF476F] text-xs ml-1 capitalize`}>{item.difficulty}</CustomText>
-              </>
-            )}
-          </View>
-        </View>
-      </View>
-      {item.description && <CustomText style={twrnc`text-gray-400 text-sm mb-4`}>{item.description}</CustomText>}
+  const renderChallengeItem = ({ item }) => {
+    const isFull = item.maxParticipants && item.participants?.length >= item.maxParticipants;
+    const isJoined = Array.isArray(item.participants) && item.participants.includes(auth.currentUser?.uid);
+    const canJoin = !isJoined && !isFull;
+
+    return (
       <TouchableOpacity
-        style={twrnc`${
-          joiningChallenges[item.id]
-            ? "bg-[#3251DD]"
-            : Array.isArray(item.participants) && item.participants.includes(auth.currentUser?.uid)
-              ? "bg-[#06D6A0]"
-              : "bg-[#4361EE]"
-        } py-3 rounded-xl items-center`}
-        onPress={() => handleJoinChallenge(item.id)}
-        disabled={
-          joiningChallenges[item.id] ||
-          (Array.isArray(item.participants) && item.participants.includes(auth.currentUser?.uid))
-        }
+        style={twrnc`bg-[#2A2E3A] rounded-2xl p-5 mb-4 shadow-lg`}
+        onPress={() => viewChallengeDetails(item)}
         activeOpacity={0.8}
       >
-        {joiningChallenges[item.id] ? (
-          <ActivityIndicator size="small" color="white" />
-        ) : Array.isArray(item.participants) && item.participants.includes(auth.currentUser?.uid) ? (
-          <View style={twrnc`flex-row items-center`}>
-            <Ionicons name="checkmark-circle" size={18} color="white" />
-            <CustomText weight="semibold" style={twrnc`text-white ml-2`}>
-              Joined
-            </CustomText>
+        <View style={twrnc`flex-row items-center mb-4`}>
+          <View style={twrnc`w-16 h-16 rounded-2xl bg-[#FFC10720] items-center justify-center mr-4`}>
+            {item.icon ? (
+              <Image source={{ uri: item.icon }} style={twrnc`w-10 h-10`} resizeMode="contain" />
+            ) : (
+              <Ionicons name="trophy" size={32} color="#FFC107" />
+            )}
           </View>
-        ) : (
-          <View style={twrnc`flex-row items-center`}>
-            <Ionicons name="add-circle-outline" size={18} color="white" />
-            <CustomText weight="semibold" style={twrnc`text-white ml-2`}>
-              Join Challenge
+          <View style={twrnc`flex-1`}>
+            <CustomText weight="bold" style={twrnc`text-white text-lg mb-1`}>
+              {item.title}
             </CustomText>
+            <View style={twrnc`flex-row items-center mb-2`}>
+              <View style={twrnc`bg-[#4361EE20] px-3 py-1 rounded-xl mr-2`}>
+                <CustomText style={twrnc`text-[#4361EE] text-xs font-medium`}>{item.type || "Challenge"}</CustomText>
+              </View>
+              <View style={twrnc`bg-[#06D6A020] px-3 py-1 rounded-xl`}>
+                <CustomText style={twrnc`text-[#06D6A0] text-xs font-medium`}>
+                  {item.participants?.length || 0} / {item.maxParticipants || "∞"} joined
+                </CustomText>
+              </View>
+              {item.groupType && item.groupType !== "public" && (
+                <View style={twrnc`bg-[#9B5DE520] px-3 py-1 rounded-xl ml-2`}>
+                  <CustomText style={twrnc`text-[#9B5DE5] text-xs font-medium capitalize`}>{item.groupType}</CustomText>
+                </View>
+              )}
+            </View>
+            <View style={twrnc`flex-row items-center`}>
+              <Ionicons name="time-outline" size={14} color="#FFC107" />
+              <CustomText style={twrnc`text-[#FFC107] text-xs ml-1`}>
+                {item.endDate ? `Ends ${new Date(item.endDate).toLocaleDateString()}` : "Ongoing"}
+              </CustomText>
+              {item.goal && item.unit && (
+                <>
+                  <Ionicons name="flag-outline" size={14} color="#06D6A0" style={twrnc`ml-3`} />
+                  <CustomText style={twrnc`text-[#06D6A0] text-xs ml-1`}>
+                    Goal: {item.goal} {item.unit}
+                  </CustomText>
+                </>
+              )}
+              {item.difficulty && (
+                <>
+                  <Ionicons name="flash-outline" size={14} color="#EF476F" style={twrnc`ml-3`} />
+                  <CustomText style={twrnc`text-[#EF476F] text-xs ml-1 capitalize`}>{item.difficulty}</CustomText>
+                </>
+              )}
+            </View>
           </View>
-        )}
+        </View>
+        {item.description && <CustomText style={twrnc`text-gray-400 text-sm mb-4`}>{item.description}</CustomText>}
+        <TouchableOpacity
+          style={twrnc`${isJoined
+              ? "bg-[#06D6A0]"
+              : isFull
+                ? "bg-gray-500" // Grey out if full
+                : joiningChallenges[item.id]
+                  ? "bg-[#3251DD]"
+                  : "bg-[#4361EE]"
+            } py-3 rounded-xl items-center`}
+          onPress={() => handleJoinChallenge(item.id)}
+          disabled={!canJoin || joiningChallenges[item.id]}
+          activeOpacity={0.8}
+        >
+          {joiningChallenges[item.id] ? (
+            <ActivityIndicator size="small" color="white" />
+          ) : isJoined ? (
+            <View style={twrnc`flex-row items-center`}>
+              <Ionicons name="checkmark-circle" size={18} color="white" />
+              <CustomText weight="semibold" style={twrnc`text-white ml-2`}>
+                Joined
+              </CustomText>
+            </View>
+          ) : isFull ? (
+            <View style={twrnc`flex-row items-center`}>
+              <Ionicons name="people" size={18} color="white" />
+              <CustomText weight="semibold" style={twrnc`text-white ml-2`}>
+                Full
+              </CustomText>
+            </View>
+          ) : (
+            <View style={twrnc`flex-row items-center`}>
+              <Ionicons name="add-circle-outline" size={18} color="white" />
+              <CustomText weight="semibold" style={twrnc`text-white ml-2`}>
+                Join Challenge
+              </CustomText>
+            </View>
+          )}
+        </TouchableOpacity>
       </TouchableOpacity>
-    </TouchableOpacity>
-  )
+    );
+  };
 
   const renderSearchResultItem = ({ item }) => (
     <View style={twrnc`bg-[#2A2E3A] rounded-2xl p-5 mb-4 shadow-lg`}>
@@ -909,9 +944,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
             style={twrnc`w-14 h-14 rounded-2xl border-2 border-[#4361EE]`}
           />
           <View
-            style={twrnc`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-[#2A2E3A] ${
-              item.isOnline ? "bg-green-500" : "bg-gray-500"
-            }`}
+            style={twrnc`absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-[#2A2E3A] ${item.isOnline ? "bg-green-500" : "bg-gray-500"
+              }`}
           />
         </View>
         <View style={twrnc`flex-1`}>
@@ -941,9 +975,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
             </View>
           ) : (
             <TouchableOpacity
-              style={twrnc`${
-                sendingFriendRequests[item.id] ? "bg-[#3251DD]" : "bg-[#4361EE]"
-              } py-2 px-4 rounded-xl items-center`}
+              style={twrnc`${sendingFriendRequests[item.id] ? "bg-[#3251DD]" : "bg-[#4361EE]"
+                } py-2 px-4 rounded-xl items-center`}
               onPress={() => handleSendFriendRequest(item.id)}
               disabled={sendingFriendRequests[item.id]}
               activeOpacity={0.8}
@@ -977,9 +1010,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
           />
         )}
         <View
-          style={twrnc`max-w-[80%] rounded-2xl p-3 ${
-            isOwnMessage ? "bg-[#4361EE] rounded-tr-none" : "bg-[#2A2E3A] rounded-tl-none"
-          }`}
+          style={twrnc`max-w-[80%] rounded-2xl p-3 ${isOwnMessage ? "bg-[#4361EE] rounded-tr-none" : "bg-[#2A2E3A] rounded-tl-none"
+            }`}
         >
           <CustomText style={twrnc`text-white`}>{item.text}</CustomText>
           <CustomText style={twrnc`text-gray-300 text-xs mt-1 text-right`}>
@@ -1334,9 +1366,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                     <View style={twrnc`relative mr-3`}>
                       <Image source={{ uri: user.avatar || DEFAULT_AVATAR }} style={twrnc`w-12 h-12 rounded-2xl`} />
                       <View
-                        style={twrnc`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#2A2E3A] ${
-                          user.isOnline ? "bg-green-500" : "bg-gray-500"
-                        }`}
+                        style={twrnc`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#2A2E3A] ${user.isOnline ? "bg-green-500" : "bg-gray-500"
+                          }`}
                       />
                     </View>
                     <View style={twrnc`flex-1`}>
@@ -1532,6 +1563,105 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false}>
+              {/* New: Challenge Group Type Selection */}
+              <View style={twrnc`mb-6`}>
+                <CustomText weight="semibold" style={twrnc`text-white mb-3`}>
+                  Challenge Type
+                </CustomText>
+                <View style={twrnc`flex-row justify-between`}>
+                  {CHALLENGE_GROUP_TYPES.map((groupType) => (
+                    <TouchableOpacity
+                      key={groupType.id}
+                      style={twrnc`bg-[#2A2E3A] p-4 rounded-2xl flex-1 mx-1 items-center ${newChallenge.groupType === groupType.id ? "border-2 border-[#FFC107]" : ""
+                        }`}
+                      onPress={() => setNewChallenge({ ...newChallenge, groupType: groupType.id, selectedFriendsForGroupChallenge: [] })} // Reset friends on type change
+                      activeOpacity={0.8}
+                    >
+                      <CustomText
+                        weight={newChallenge.groupType === groupType.id ? "bold" : "medium"}
+                        style={twrnc`text-white text-center`}
+                      >
+                        {groupType.name}
+                      </CustomText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {newChallenge.groupType !== "public" && (
+                  <CustomText style={twrnc`text-gray-400 text-sm mt-2 text-center`}>
+                    {CHALLENGE_GROUP_TYPES.find(t => t.id === newChallenge.groupType)?.description}
+                  </CustomText>
+                )}
+              </View>
+
+              {/* Friend Selection for Duo/Lobby Challenges */}
+              {(newChallenge.groupType === "duo" || newChallenge.groupType === "lobby") && (
+                <View style={twrnc`mb-6`}>
+                  <CustomText weight="semibold" style={twrnc`text-white mb-3`}>
+                    Select Friends ({newChallenge.selectedFriendsForGroupChallenge.length} / {newChallenge.groupType === "duo" ? 1 : CHALLENGE_GROUP_TYPES.find(t => t.id === "lobby").maxParticipants - 1})
+                  </CustomText>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                    {friends.map((friend) => {
+                      const isSelected = newChallenge.selectedFriendsForGroupChallenge.some(
+                        (f) => f.id === friend.id,
+                      );
+                      const maxFriendsReached =
+                        newChallenge.groupType === "duo"
+                          ? newChallenge.selectedFriendsForGroupChallenge.length >= 1
+                          : newChallenge.selectedFriendsForGroupChallenge.length >=
+                          (CHALLENGE_GROUP_TYPES.find(t => t.id === "lobby").maxParticipants - 1);
+
+                      return (
+                        <TouchableOpacity
+                          key={friend.id}
+                          style={twrnc`mr-3 items-center ${isSelected ? "border-2 border-[#06D6A0] rounded-2xl p-1" : ""
+                            }`}
+                          onPress={() => {
+                            setNewChallenge((prev) => {
+                              const currentSelected = [...prev.selectedFriendsForGroupChallenge];
+                              if (isSelected) {
+                                return {
+                                  ...prev,
+                                  selectedFriendsForGroupChallenge: currentSelected.filter(
+                                    (f) => f.id !== friend.id,
+                                  ),
+                                };
+                              } else {
+                                if (prev.groupType === "duo") {
+                                  return { ...prev, selectedFriendsForGroupChallenge: [friend] }; // Only one friend for duo
+                                } else if (maxFriendsReached) {
+                                  showModal({
+                                    title: "Limit Reached",
+                                    message: `You can only select up to ${CHALLENGE_GROUP_TYPES.find(t => t.id === "lobby").maxParticipants - 1} friends for a lobby challenge.`,
+                                    type: "info",
+                                  });
+                                  return prev;
+                                } else {
+                                  return {
+                                    ...prev,
+                                    selectedFriendsForGroupChallenge: [...currentSelected, friend],
+                                  };
+                                }
+                              }
+                            });
+                          }}
+                          disabled={!isSelected && maxFriendsReached && newChallenge.groupType !== "duo"} // Disable if max reached and not already selected, and not duo
+                          activeOpacity={0.8}
+                        >
+                          <Image
+                            source={{ uri: friend.avatar || DEFAULT_AVATAR }}
+                            style={twrnc`w-16 h-16 rounded-2xl ${!isSelected && maxFriendsReached && newChallenge.groupType !== "duo" ? "opacity-50" : ""
+                              }`}
+                          />
+                          <CustomText style={twrnc`text-white text-xs mt-1 text-center`}>
+                            {friend.displayName || friend.username}
+                          </CustomText>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+
               <View style={twrnc`mb-6`}>
                 <CustomText weight="semibold" style={twrnc`text-white mb-3`}>
                   Challenge Title
@@ -1560,15 +1690,14 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
               </View>
               <View style={twrnc`mb-6`}>
                 <CustomText weight="semibold" style={twrnc`text-white mb-3`}>
-                  Challenge Type
+                  Activity Type
                 </CustomText>
                 <View style={twrnc`flex-row justify-between`}>
                   {["Walking", "Running", "Cycling"].map((type) => (
                     <TouchableOpacity
                       key={type}
-                      style={twrnc`bg-[#2A2E3A] p-4 rounded-2xl flex-1 mx-1 items-center ${
-                        newChallenge.type === type ? "border-2 border-[#4361EE]" : ""
-                      }`}
+                      style={twrnc`bg-[#2A2E3A] p-4 rounded-2xl flex-1 mx-1 items-center ${newChallenge.type === type ? "border-2 border-[#4361EE]" : ""
+                        }`}
                       onPress={() => setNewChallenge({ ...newChallenge, type })}
                       activeOpacity={0.8}
                     >
@@ -1590,11 +1719,10 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                   {[7, 14, 30].map((days) => (
                     <TouchableOpacity
                       key={days}
-                      style={twrnc`bg-[#2A2E3A] p-4 rounded-2xl flex-1 mx-1 items-center ${
-                        Math.round((newChallenge.endDate - new Date()) / (24 * 60 * 60 * 1000)) === days
+                      style={twrnc`bg-[#2A2E3A] p-4 rounded-2xl flex-1 mx-1 items-center ${Math.round((newChallenge.endDate - new Date()) / (24 * 60 * 60 * 1000)) === days
                           ? "border-2 border-[#4361EE]"
                           : ""
-                      }`}
+                        }`}
                       onPress={() =>
                         setNewChallenge({
                           ...newChallenge,
@@ -1679,11 +1807,10 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                   {ACTIVITY_TYPES.map((activity) => (
                     <TouchableOpacity
                       key={activity.id}
-                      style={twrnc`mx-2 p-4 rounded-2xl items-center min-w-[100px] ${
-                        customChallenge.activityType === activity.id
+                      style={twrnc`mx-2 p-4 rounded-2xl items-center min-w-[100px] ${customChallenge.activityType === activity.id
                           ? `border-2 border-[${activity.color}]`
                           : "bg-[#2A2E3A]"
-                      }`}
+                        }`}
                       onPress={() => updateChallengeActivity(activity.id)}
                       activeOpacity={0.8}
                     >
@@ -1737,9 +1864,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                   {ACTIVITY_TYPES.find((a) => a.id === customChallenge.activityType)?.goalOptions.map((option) => (
                     <TouchableOpacity
                       key={option}
-                      style={twrnc`bg-[#3A3F4B] px-4 py-2 rounded-xl mr-2 mb-2 ${
-                        customChallenge.goal === option ? "bg-[#4361EE]" : ""
-                      }`}
+                      style={twrnc`bg-[#3A3F4B] px-4 py-2 rounded-xl mr-2 mb-2 ${customChallenge.goal === option ? "bg-[#4361EE]" : ""
+                        }`}
                       onPress={() => updateChallengeDescription(option, customChallenge.duration)}
                       activeOpacity={0.8}
                     >
@@ -1763,11 +1889,10 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                   {DIFFICULTY_LEVELS.map((difficulty) => (
                     <TouchableOpacity
                       key={difficulty.id}
-                      style={twrnc`flex-1 mx-1 p-4 rounded-2xl items-center ${
-                        customChallenge.difficulty === difficulty.id
+                      style={twrnc`flex-1 mx-1 p-4 rounded-2xl items-center ${customChallenge.difficulty === difficulty.id
                           ? `border-2 border-[${difficulty.color}]`
                           : "bg-[#2A2E3A]"
-                      }`}
+                        }`}
                       onPress={() => setCustomChallenge((prev) => ({ ...prev, difficulty: difficulty.id }))}
                       activeOpacity={0.8}
                     >
@@ -1807,9 +1932,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                   {[3, 7, 14, 30].map((days) => (
                     <TouchableOpacity
                       key={days}
-                      style={twrnc`flex-1 mx-1 p-4 rounded-2xl items-center ${
-                        customChallenge.duration === days ? "border-2 border-[#4361EE]" : "bg-[#2A2E3A]"
-                      }`}
+                      style={twrnc`flex-1 mx-1 p-4 rounded-2xl items-center ${customChallenge.duration === days ? "border-2 border-[#4361EE]" : "bg-[#2A2E3A]"
+                        }`}
                       onPress={() => updateChallengeDescription(customChallenge.goal, days)}
                       activeOpacity={0.8}
                     >
@@ -1888,7 +2012,7 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                     <CustomText weight="semibold" style={twrnc`text-[#4361EE] text-lg`}>
                       {Math.round(
                         customChallenge.goal *
-                          DIFFICULTY_LEVELS.find((d) => d.id === customChallenge.difficulty).multiplier,
+                        DIFFICULTY_LEVELS.find((d) => d.id === customChallenge.difficulty).multiplier,
                       )}
                     </CustomText>
                     <CustomText style={twrnc`text-gray-400 text-xs`}>
@@ -1926,11 +2050,9 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                   </CustomText>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={twrnc`${
-                    creatingChallenge ? "bg-[#3251DD]" : "bg-[#4361EE]"
-                  } py-4 px-6 rounded-2xl flex-1 ml-2 items-center ${
-                    !customChallenge.title.trim() ? "opacity-50" : ""
-                  }`}
+                  style={twrnc`${creatingChallenge ? "bg-[#3251DD]" : "bg-[#4361EE]"
+                    } py-4 px-6 rounded-2xl flex-1 ml-2 items-center ${!customChallenge.title.trim() ? "opacity-50" : ""
+                    }`}
                   onPress={handleCreateCustomChallenge}
                   disabled={creatingChallenge || !customChallenge.title.trim()}
                   activeOpacity={0.8}
@@ -1984,9 +2106,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                       style={twrnc`w-28 h-28 rounded-3xl border-4 border-[#4361EE]`}
                     />
                     <View
-                      style={twrnc`absolute -bottom-2 -right-2 w-8 h-8 rounded-full border-4 border-[#121826] ${
-                        selectedFriend.isOnline ? "bg-green-500" : "bg-gray-500"
-                      }`}
+                      style={twrnc`absolute -bottom-2 -right-2 w-8 h-8 rounded-full border-4 border-[#121826] ${selectedFriend.isOnline ? "bg-green-500" : "bg-gray-500"
+                        }`}
                     />
                   </View>
                   <CustomText weight="bold" style={twrnc`text-white text-2xl mb-2`}>
@@ -2070,7 +2191,7 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                         <View style={twrnc`items-center`}>
                           <CustomText weight="semibold" style={twrnc`text-[#4361EE] text-lg`}>
                             {typeof selectedFriend.lastActivity.distance === "number" &&
-                            !isNaN(selectedFriend.lastActivity.distance)
+                              !isNaN(selectedFriend.lastActivity.distance)
                               ? selectedFriend.lastActivity.distance.toFixed(2)
                               : "0"}
                           </CustomText>
@@ -2109,9 +2230,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
 
                 <View style={twrnc`flex-row justify-between`}>
                   <TouchableOpacity
-                    style={twrnc`${
-                      sendingChallenge ? "bg-[#3251DD]" : "bg-[#4361EE]"
-                    } rounded-2xl py-4 px-6 flex-1 mr-2 items-center`}
+                    style={twrnc`${sendingChallenge ? "bg-[#3251DD]" : "bg-[#4361EE]"
+                      } rounded-2xl py-4 px-6 flex-1 mr-2 items-center`}
                     onPress={sendChallengeToFriend}
                     disabled={sendingChallenge}
                     activeOpacity={0.8}
@@ -2133,9 +2253,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                     )}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={twrnc`${
-                      openingChat ? "bg-[#1F2330]" : "bg-[#2A2E3A]"
-                    } rounded-2xl py-4 px-6 flex-1 ml-2 items-center`}
+                    style={twrnc`${openingChat ? "bg-[#1F2330]" : "bg-[#2A2E3A]"
+                      } rounded-2xl py-4 px-6 flex-1 ml-2 items-center`}
                     onPress={() => {
                       setIsFriendProfileVisible(false)
                       handleOpenChat(selectedFriend)
@@ -2158,6 +2277,10 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                         </CustomText>
                       </>
                     )}
+                    <Ionicons name="chatbubble-outline" size={20} color="white" style={twrnc`mb-1`} />
+                    <CustomText weight="semibold" style={twrnc`text-white text-sm`}>
+                      Message
+                    </CustomText>
                   </TouchableOpacity>
                 </View>
               </ScrollView>
@@ -2254,7 +2377,7 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                     )}
                   </View>
 
-                  <View style={twrnc`flex-row justify-between items-center`}>
+                  <View style={twrnc`flex-row justify-between items-center mt-4`}>
                     <View style={twrnc`items-center flex-1`}>
                       <View style={twrnc`w-10 h-10 rounded-xl bg-[#FFC10720] items-center justify-center mb-2`}>
                         <Ionicons name="time-outline" size={20} color="#FFC107" />
@@ -2270,7 +2393,7 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                         <Ionicons name="people-outline" size={20} color="#9B5DE5" />
                       </View>
                       <CustomText weight="bold" style={twrnc`text-white text-lg`}>
-                        {selectedChallenge.participants?.length || 0}
+                        {selectedChallenge.participants?.length || 0} / {selectedChallenge.maxParticipants || "∞"}
                       </CustomText>
                       <CustomText style={twrnc`text-gray-400 text-xs`}>Participants</CustomText>
                     </View>
@@ -2315,15 +2438,28 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                   ) : (
                     // Join Challenge Button
                     <TouchableOpacity
-                      style={twrnc`${
-                        joiningChallenges[selectedChallenge.id] ? "bg-[#3251DD]" : "bg-[#4361EE]"
-                      } py-4 px-6 rounded-2xl flex-1 mr-2 items-center`}
+                      style={twrnc`${selectedChallenge.maxParticipants && selectedChallenge.participants?.length >= selectedChallenge.maxParticipants
+                          ? "bg-gray-500" // Grey out if full
+                          : joiningChallenges[selectedChallenge.id]
+                            ? "bg-[#3251DD]"
+                            : "bg-[#4361EE]"
+                        } py-4 px-6 rounded-2xl flex-1 mr-2 items-center`}
                       onPress={() => handleJoinChallenge(selectedChallenge.id)}
-                      disabled={joiningChallenges[selectedChallenge.id]}
+                      disabled={
+                        (selectedChallenge.maxParticipants && selectedChallenge.participants?.length >= selectedChallenge.maxParticipants) ||
+                        joiningChallenges[selectedChallenge.id]
+                      }
                       activeOpacity={0.8}
                     >
                       {joiningChallenges[selectedChallenge.id] ? (
                         <ActivityIndicator size="small" color="white" />
+                      ) : selectedChallenge.maxParticipants && selectedChallenge.participants?.length >= selectedChallenge.maxParticipants ? (
+                        <View style={twrnc`flex-row items-center`}>
+                          <Ionicons name="people" size={20} color="white" />
+                          <CustomText weight="semibold" style={twrnc`text-white ml-2`}>
+                            Full
+                          </CustomText>
+                        </View>
                       ) : (
                         <View style={twrnc`flex-row items-center`}>
                           <Ionicons name="add-circle-outline" size={20} color="white" />
@@ -2388,9 +2524,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                       style={twrnc`w-12 h-12 rounded-2xl`}
                     />
                     <View
-                      style={twrnc`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#1A1F2E] ${
-                        selectedFriend.isOnline ? "bg-green-500" : "bg-gray-500"
-                      }`}
+                      style={twrnc`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[#1A1F2E] ${selectedFriend.isOnline ? "bg-green-500" : "bg-gray-500"
+                        }`}
                     />
                   </View>
                   <View style={twrnc`flex-1`}>
@@ -2453,9 +2588,8 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
                       />
                     </View>
                     <TouchableOpacity
-                      style={twrnc`${
-                        sendingMessage ? "bg-[#3251DD]" : "bg-[#4361EE]"
-                      } w-12 h-12 rounded-2xl items-center justify-center ${!chatMessage.trim() ? "opacity-50" : ""}`}
+                      style={twrnc`${sendingMessage ? "bg-[#3251DD]" : "bg-[#4361EE]"
+                        } w-12 h-12 rounded-2xl items-center justify-center ${!chatMessage.trim() ? "opacity-50" : ""}`}
                       onPress={handleSendMessage}
                       disabled={!chatMessage.trim() || sendingMessage}
                       activeOpacity={0.8}
@@ -2495,4 +2629,5 @@ const CommunityScreen = ({ navigateToDashboard, navigation, params = {} }) => {
     </View>
   )
 }
+
 export default CommunityScreen
