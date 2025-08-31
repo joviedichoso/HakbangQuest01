@@ -93,6 +93,13 @@ export const DIFFICULTY_LEVELS = [
   { id: "extreme", name: "Extreme", multiplier: 2.0, color: "#9B5DE5", icon: "skull-outline" },
 ]
 
+// New: Challenge group types with their configurations
+export const CHALLENGE_GROUP_TYPES = [
+  { id: "public", name: "Public", maxParticipants: null, description: "Open to everyone in the community." },
+  { id: "duo", name: "Duo Challenge", maxParticipants: 2, description: "A challenge for you and one friend." },
+  { id: "lobby", name: "Lobby Challenge", maxParticipants: 5, description: "A challenge for you and a small group of friends (up to 4 others)." },
+];
+
 // Helper function to serialize user objects for Firestore
 export const serializeUserForFirestore = (user) => {
   if (!user) return null
@@ -749,32 +756,52 @@ export const loadChallenges = async (callbacks) => {
   }
 }
 
-export const createChallenge = async (challengeData, friendIds = []) => {
+export const createChallenge = async (challengeData, friendIds = [], groupType = "public") => {
   try {
     if (!challengeData.title.trim()) {
-      throw new Error("Please enter a challenge title")
+      throw new Error("Please enter a challenge title");
     }
 
-    const user = auth.currentUser
-    const serializedFriendIds = friendIds.map((id) => String(id))
+    const user = auth.currentUser;
+    const safeFriendIds = Array.isArray(friendIds) ? friendIds : [];
+    const serializedFriendIds = safeFriendIds.map((id) => String(id));
+
+    // Determine maxParticipants based on groupType
+    const selectedGroupType = CHALLENGE_GROUP_TYPES.find(type => type.id === groupType);
+    if (!selectedGroupType) {
+      throw new Error("Invalid challenge group type provided.");
+    }
+
+    let maxParticipants = selectedGroupType.maxParticipants;
+    let isPublic = selectedGroupType.id === "public";
+
+    // For duo/lobby challenges, ensure invitedUsers count is within limits
+    if (selectedGroupType.id === "duo" && serializedFriendIds.length !== 1) {
+      throw new Error("Duo challenges require exactly one invited friend.");
+    }
+    if (selectedGroupType.id === "lobby" && serializedFriendIds.length > (maxParticipants - 1)) {
+      throw new Error(`Lobby challenges can invite up to ${maxParticipants - 1} friends.`);
+    }
 
     const newChallengeData = {
       title: challengeData.title,
       description: challengeData.description,
-      type: challengeData.type,
+      type: challengeData.type, // This is the activity type (e.g., "Walking")
       createdBy: user.uid,
       createdAt: serverTimestamp(),
       endDate: Timestamp.fromDate(challengeData.endDate),
-      isPublic: true,
+      isPublic: isPublic, // Set based on groupType
+      groupType: selectedGroupType.id, // Store the group type
+      maxParticipants: maxParticipants, // Store max participants
       participants: [user.uid],
       invitedUsers: serializedFriendIds,
-    }
+    };
 
-    const challengeRef = await addDoc(collection(db, "challenges"), newChallengeData)
+    const challengeRef = await addDoc(collection(db, "challenges"), newChallengeData);
 
     // Get current user data for notifications
-    const currentUserDoc = await getDoc(doc(db, "users", user.uid))
-    const currentUserData = currentUserDoc.data()
+    const currentUserDoc = await getDoc(doc(db, "users", user.uid));
+    const currentUserData = currentUserDoc.data();
 
     // Send notifications to invited friends
     const notificationPromises = serializedFriendIds.map(async (friendId) => {
@@ -791,20 +818,21 @@ export const createChallenge = async (challengeData, friendIds = []) => {
             id: challengeRef.id,
             title: challengeData.title,
             type: challengeData.type,
+            groupType: selectedGroupType.name, // Pass group type name for notification
           },
-        )
+        );
 
         if (notificationId) {
-          console.log(`✅ Challenge invitation notification sent to ${friendId}: ${notificationId}`)
+          console.log(`✅ Challenge invitation notification sent to ${friendId}: ${notificationId}`);
         } else {
-          console.warn(`⚠️ Failed to send challenge invitation notification to ${friendId}`)
+          console.warn(`⚠️ Failed to send challenge invitation notification to ${friendId}`);
         }
       } catch (notificationError) {
-        console.error(`❌ Error sending challenge invitation notification to ${friendId}:`, notificationError)
+        console.error(`❌ Error sending challenge invitation notification to ${friendId}:`, notificationError);
       }
-    })
+    });
 
-    await Promise.allSettled(notificationPromises)
+    await Promise.allSettled(notificationPromises);
 
     return {
       success: true,
@@ -812,39 +840,39 @@ export const createChallenge = async (challengeData, friendIds = []) => {
       challenge: {
         id: challengeRef.id,
         ...newChallengeData,
-        endDate: challengeData.endDate,
+        endDate: challengeData.endDate, // Ensure endDate is a Date object for client-side
       },
-    }
+    };
   } catch (err) {
-    console.error("Error creating challenge:", err)
-    throw new Error(err.message || "Failed to create challenge. Please try again.")
+    console.error("Error creating challenge:", err);
+    throw new Error(err.message || "Failed to create challenge. Please try again.");
   }
 }
 
 export const createCustomChallenge = async (customChallenge, targetFriend) => {
   try {
     if (!targetFriend) {
-      throw new Error("No target friend selected for challenge.")
+      throw new Error("No target friend selected for challenge.");
     }
 
     if (!customChallenge.title.trim()) {
-      throw new Error("Please enter a challenge title.")
+      throw new Error("Please enter a challenge title.");
     }
 
-    const user = auth.currentUser
+    const user = auth.currentUser;
 
     // Get activity configuration
-    const activityConfig = ACTIVITY_TYPES.find((a) => a.id === customChallenge.activityType)
-    const difficultyConfig = DIFFICULTY_LEVELS.find((d) => d.id === customChallenge.difficulty)
+    const activityConfig = ACTIVITY_TYPES.find((a) => a.id === customChallenge.activityType);
+    const difficultyConfig = DIFFICULTY_LEVELS.find((d) => d.id === customChallenge.difficulty);
 
     // Calculate adjusted goal based on difficulty
-    const adjustedGoal = Math.round(customChallenge.goal * difficultyConfig.multiplier)
+    const adjustedGoal = Math.round(customChallenge.goal * difficultyConfig.multiplier);
 
     const challengeData = {
       title: customChallenge.title,
       description: customChallenge.description,
-      type: activityConfig.name,
-      activityType: customChallenge.activityType,
+      type: activityConfig.name, // Activity name (e.g., "Walking")
+      activityType: customChallenge.activityType, // Activity ID (e.g., "walking")
       goal: adjustedGoal,
       originalGoal: customChallenge.goal,
       unit: activityConfig.unit,
@@ -854,8 +882,10 @@ export const createCustomChallenge = async (customChallenge, targetFriend) => {
       createdBy: user.uid,
       createdAt: serverTimestamp(),
       endDate: Timestamp.fromDate(new Date(Date.now() + customChallenge.duration * 24 * 60 * 60 * 1000)),
-      isPublic: false, // Custom challenges are private
+      isPublic: false, // Custom challenges are always private
       isCustomChallenge: true,
+      groupType: "duo", // Custom challenges are inherently duo challenges
+      maxParticipants: 2, // Duo challenges have a max of 2 participants
       participants: [user.uid],
       invitedUsers: [targetFriend.id],
       targetFriend: {
@@ -863,16 +893,16 @@ export const createCustomChallenge = async (customChallenge, targetFriend) => {
         name: targetFriend.displayName || targetFriend.username,
         avatar: targetFriend.avatar,
       },
-      status: "pending",
-    }
+      status: "pending", // Status for custom challenges (pending acceptance)
+    };
 
-    console.log("🏆 Creating custom challenge:", challengeData)
+    console.log("🏆 Creating custom challenge:", challengeData);
 
-    const challengeRef = await addDoc(collection(db, "challenges"), challengeData)
+    const challengeRef = await addDoc(collection(db, "challenges"), challengeData);
 
     // Get current user data for notification
-    const currentUserDoc = await getDoc(doc(db, "users", user.uid))
-    const currentUserData = currentUserDoc.data()
+    const currentUserDoc = await getDoc(doc(db, "users", user.uid));
+    const currentUserData = currentUserDoc.data();
 
     // Send notification to the target friend
     try {
@@ -892,16 +922,17 @@ export const createCustomChallenge = async (customChallenge, targetFriend) => {
           unit: activityConfig.unit,
           difficulty: difficultyConfig.name,
           duration: customChallenge.duration,
+          groupType: "Duo Challenge", // For notification display
         },
-      )
+      );
 
       if (notificationId) {
-        console.log(`✅ Custom challenge notification sent: ${notificationId}`)
+        console.log(`✅ Custom challenge notification sent: ${notificationId}`);
       } else {
-        console.warn("⚠️ Failed to send custom challenge notification")
+        console.warn("⚠️ Failed to send custom challenge notification");
       }
     } catch (notificationError) {
-      console.error("❌ Error sending custom challenge notification:", notificationError)
+      console.error("❌ Error sending custom challenge notification:", notificationError);
     }
 
     return {
@@ -912,10 +943,10 @@ export const createCustomChallenge = async (customChallenge, targetFriend) => {
         ...challengeData,
         endDate: new Date(Date.now() + customChallenge.duration * 24 * 60 * 60 * 1000),
       },
-    }
+    };
   } catch (err) {
-    console.error("Error creating custom challenge:", err)
-    throw new Error(err.message || "Failed to create challenge. Please try again.")
+    console.error("Error creating custom challenge:", err);
+    throw new Error(err.message || "Failed to create challenge. Please try again.");
   }
 }
 
@@ -931,9 +962,15 @@ export const joinChallenge = async (challengeId) => {
 
     const challengeData = challengeDoc.data()
     const participants = challengeData.participants || []
+    const maxParticipants = challengeData.maxParticipants; // Get maxParticipants from challenge data
 
     if (participants.includes(user.uid)) {
       throw new Error("You are already participating in this challenge")
+    }
+
+    // Check if the challenge is full
+    if (maxParticipants && participants.length >= maxParticipants) {
+      throw new Error("This challenge is already full.");
     }
 
     await updateDoc(challengeRef, {

@@ -51,6 +51,8 @@ class NotificationService {
           const { data } = notification.request.content
 
           return {
+            shouldShowBanner: true,  
+            shouldShowList: true,   
             shouldShowAlert: true,
             shouldPlaySound: true,
             shouldSetBadge: true,
@@ -90,23 +92,26 @@ class NotificationService {
     }
   }
 
-  // Register for push notifications
+  // Welcome Back Notifications
+  static async sendWelcomeBackNotification(userName = "username") {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Welcome Back 🎉",
+          body: `Great to see you again, ${userName}!`,
+          sound: true,
+        },
+        trigger: null, // fire immediately
+      })
+      console.log("✅ Welcome back notification scheduled")
+    } catch (error) {
+      console.error("❌ Error sending welcome back notification:", error)
+    }
+  }
+
   static async registerForPushNotifications() {
     try {
-      // Check if we already have a valid token
-      const cachedToken = await AsyncStorage.getItem("pushToken")
-      const tokenTimestamp = await AsyncStorage.getItem("pushTokenTimestamp")
-
-      // Use cached token if it's less than 24 hours old
-      if (cachedToken && tokenTimestamp) {
-        const tokenAge = Date.now() - Number.parseInt(tokenTimestamp)
-        if (tokenAge < 24 * 60 * 60 * 1000) {
-          // 24 hours
-          console.log("📱 Using cached push token")
-          return true
-        }
-      }
-
+      // Check permissions
       const { status: existingStatus } = await Notifications.getPermissionsAsync()
       let finalStatus = existingStatus
 
@@ -123,41 +128,34 @@ class NotificationService {
       }
 
       if (finalStatus !== "granted") {
-        console.warn("⚠️ Push notification permissions not granted")
+        console.warn("⚠️ Notification permissions not granted")
         return false
       }
 
-      // Get push token with project ID
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: "a74f26e2-cc0c-4544-b860-af2692a8c3f8",
-      })
-
-      const pushToken = tokenData.data
-
-      // Cache the token
-      await AsyncStorage.setItem("pushToken", pushToken)
-      await AsyncStorage.setItem("pushTokenTimestamp", Date.now().toString())
-
-      // Save token to user profile in Firestore
-      const user = auth.currentUser
-      if (user) {
-        const userRef = doc(db, "users", user.uid)
-        await updateDoc(userRef, {
-          pushToken: pushToken,
-          deviceType: Platform.OS,
-          lastTokenUpdate: serverTimestamp(),
-        })
-        console.log("💾 Push token saved to user profile")
-      }
-
+      console.log("✅ Local notifications enabled")
       return true
     } catch (error) {
-      console.error("❌ Error registering for push notifications:", error)
+      console.error("❌ Error enabling local notifications:", error)
       return false
     }
   }
 
-  // Setup notification categories for iOS interactive notifications
+  static async sendVerifyAccountNotification() {
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Verify Your Account 📩",
+          body: "Please verify your email to unlock all features.",
+          sound: true,
+        },
+        trigger: null, // null = fire immediately
+      })
+      console.log("✅ Local verify account notification scheduled")
+    } catch (error) {
+      console.error("❌ Error sending verify account notification:", error)
+    }
+  }
+
   static async setupNotificationCategories() {
     try {
       await Notifications.setNotificationCategoryAsync("friendRequest", [
@@ -256,56 +254,6 @@ class NotificationService {
     }
   }
 
-  // Create a new notification in Firestore
-  static async createNotification(userId, data) {
-    try {
-      if (!userId || !data) {
-        throw new Error("Missing required parameters: userId and data")
-      }
-
-      const notificationData = {
-        userId,
-        type: data.type || "general",
-        title: data.title || "New Notification",
-        message: data.message || "",
-        read: false,
-        createdAt: serverTimestamp(),
-        ...data,
-        // Ensure these fields are properly structured
-        actionData: data.actionData || {},
-        fromUserId: data.fromUserId || null,
-        fromUserName: data.fromUserName || null,
-        fromUserAvatar: data.fromUserAvatar || null,
-      }
-
-      const notificationsRef = collection(db, "notifications")
-      const notificationDoc = await addDoc(notificationsRef, notificationData)
-
-      console.log(`📝 Notification created: ${notificationDoc.id}`)
-
-      // Add to queue for push notification
-      this.notificationQueue.push({
-        id: notificationDoc.id,
-        userId,
-        data: { ...notificationData, id: notificationDoc.id },
-      })
-
-      // Process queue if not already processing
-      if (!this.isProcessingQueue) {
-        this.processNotificationQueue()
-      }
-
-      // Clear cache for this user
-      const cacheKey = `badgeCount_${userId}`
-      this.notificationCache.delete(cacheKey)
-
-      return notificationDoc.id
-    } catch (error) {
-      console.error("❌ Error creating notification:", error)
-      return null
-    }
-  }
-
   // Process notification queue for push notifications
   static async processNotificationQueue() {
     if (this.isProcessingQueue || this.notificationQueue.length === 0) {
@@ -326,119 +274,6 @@ class NotificationService {
       console.error("❌ Error processing notification queue:", error)
     } finally {
       this.isProcessingQueue = false
-    }
-  }
-
-  // Send push notification
-  static async sendPushNotification(userId, data) {
-    try {
-      if (!userId || !data) {
-        throw new Error("Missing required parameters for push notification")
-      }
-
-      // Get user's push token with caching
-      const cacheKey = `userToken_${userId}`
-      let userToken = this.notificationCache.get(cacheKey)
-
-      if (!userToken || userToken.timestamp < Date.now() - this.cacheExpiry) {
-        const userRef = doc(db, "users", userId)
-        const userDoc = await getDoc(userRef)
-
-        if (!userDoc.exists()) {
-          console.warn(`⚠️ User document not found: ${userId}`)
-          return false
-        }
-
-        const userData = userDoc.data()
-        const pushToken = userData.pushToken
-
-        if (!pushToken) {
-          console.warn(`⚠️ No push token found for user: ${userId}`)
-          return false
-        }
-
-        userToken = {
-          token: pushToken,
-          timestamp: Date.now(),
-        }
-        this.notificationCache.set(cacheKey, userToken)
-      }
-
-      // Prepare notification message
-      const message = {
-        to: userToken.token,
-        sound: "default",
-        title: data.title || "New Notification",
-        body: data.message || "You have a new notification",
-        data: {
-          ...data,
-          notificationId: data.id,
-          timestamp: Date.now(),
-        },
-        badge: await this.updateBadgeCount(),
-        priority: "high",
-        channelId: "default",
-      }
-
-      // Add category for iOS interactive notifications
-      if (Platform.OS === "ios" && data.type) {
-        message.categoryId = data.type
-      }
-
-      // Add Android-specific options
-      if (Platform.OS === "android") {
-        message.android = {
-          channelId: "default",
-          priority: "high",
-          sound: true,
-          vibrate: [0, 250, 250, 250],
-          color: "#4361EE",
-        }
-      }
-
-      // Send notification via Expo's push notification service
-      const response = await fetch("https://exp.host/--/api/v2/push/send", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Accept-encoding": "gzip, deflate",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(message),
-      })
-
-      const result = await response.json()
-
-      if (response.ok && result.data) {
-        console.log(`✅ Push notification sent successfully: ${data.id}`)
-
-        // Clear retry attempts on success
-        this.retryAttempts.delete(data.id)
-        return true
-      } else {
-        throw new Error(`Push notification failed: ${result.errors?.[0]?.message || "Unknown error"}`)
-      }
-    } catch (error) {
-      console.error("❌ Error sending push notification:", error)
-
-      // Implement retry logic
-      const retryCount = this.retryAttempts.get(data.id) || 0
-      if (retryCount < this.maxRetryAttempts) {
-        this.retryAttempts.set(data.id, retryCount + 1)
-
-        // Exponential backoff
-        const delay = Math.pow(2, retryCount) * 1000
-        setTimeout(() => {
-          this.notificationQueue.push({ userId, data })
-        }, delay)
-
-        console.log(`🔄 Retrying push notification in ${delay}ms (attempt ${retryCount + 1}/${this.maxRetryAttempts})`)
-      } else {
-        console.error(`❌ Max retry attempts reached for notification: ${data.id}`)
-        this.retryAttempts.delete(data.id)
-      }
-
-      return false
     }
   }
 
@@ -502,8 +337,6 @@ class NotificationService {
       return null
     }
   }
-
-  // Challenge Invitation Notifications
   static async sendChallengeInvitationNotification(toUserId, fromUserData, challengeData) {
     try {
       // Create detailed challenge message based on challenge type

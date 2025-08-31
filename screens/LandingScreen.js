@@ -1,13 +1,14 @@
 "use client"
 import React, { useState, useEffect, useRef } from 'react'
-import { 
-  View, 
-  ImageBackground, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  Animated, 
+import {
+  View,
+  ImageBackground,
+  TouchableOpacity,
+  ActivityIndicator,
+  Animated,
   Easing,
-  Dimensions 
+  Dimensions,
+  Image
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Ionicons } from '@expo/vector-icons'
@@ -15,6 +16,27 @@ import twrnc from 'twrnc'
 import CustomText from '../components/CustomText'
 
 const { width, height } = Dimensions.get('window')
+
+// Add device size logic
+const isSmallDevice = width < 375; // iPhone SE and similar small Android devices
+const isMediumDevice = width >= 375 && width < 414; // Standard phones
+const isLargeDevice = width >= 414; // Large phones
+
+// Responsive font sizes
+const responsiveFontSizes = {
+  xs: isSmallDevice ? 10 : isMediumDevice ? 11 : 12,
+  sm: isSmallDevice ? 12 : isMediumDevice ? 13 : 14,
+  base: isSmallDevice ? 14 : isMediumDevice ? 15 : 16,
+  lg: isSmallDevice ? 16 : isMediumDevice ? 18 : 20,
+  xl: isSmallDevice ? 18 : isMediumDevice ? 20 : 22,
+  "2xl": isSmallDevice ? 20 : isMediumDevice ? 22 : 24,
+};
+
+// Responsive padding/margin
+const responsivePadding = {
+  base: isSmallDevice ? 3 : isMediumDevice ? 4 : 5,
+  lg: isSmallDevice ? 4 : isMediumDevice ? 5 : 6,
+}
 
 const LandingScreen = ({ navigateToSignIn, navigateToSignUp }) => {
   const [isLoading, setIsLoading] = useState(true)
@@ -153,17 +175,24 @@ const LandingScreen = ({ navigateToSignIn, navigateToSignUp }) => {
           style={twrnc`flex-1 justify-end`}
         >
           {/* Header with app branding */}
-          <Animated.View 
+          <Animated.View
             style={[
-              twrnc`absolute top-16 left-0 right-0 items-center z-10`,
+              twrnc`absolute top-12 left-0 right-0 items-center z-10`,
               { opacity: fadeAnim, transform: [{ translateY: titleSlideAnim }] }
             ]}
           >
             <View style={twrnc`bg-white bg-opacity-10 backdrop-blur-sm rounded-2xl px-6 py-3 border border-white border-opacity-20`}>
               <View style={twrnc`flex-row items-center`}>
-                <View style={twrnc`bg-[#4361EE] p-2 rounded-full mr-3`}>
-                  <FontAwesome name="heartbeat" size={20} color="#FFFFFF" />
-                </View>
+                <Image
+                  source={require('../assets/image/icon.png')}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    resizeMode: 'contain',
+                    borderRadius: 12,  
+                    marginRight: 8     
+                  }}
+                />
                 <CustomText weight="bold" style={twrnc`text-white text-xl`}>
                   HakbangQuest
                 </CustomText>
@@ -172,7 +201,7 @@ const LandingScreen = ({ navigateToSignIn, navigateToSignUp }) => {
           </Animated.View>
 
           {/* Main content */}
-          <Animated.View 
+          <Animated.View
             style={[
               twrnc`p-6 pb-12`,
               { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }
@@ -186,13 +215,13 @@ const LandingScreen = ({ navigateToSignIn, navigateToSignUp }) => {
                   { icon: 'users', color: '#06D6A0', label: 'Community' },
                   { icon: 'line-chart', color: '#4361EE', label: 'Progress' },
                 ].map((feature, index) => (
-                  <Animated.View 
+                  <Animated.View
                     key={feature.label}
                     style={[
                       twrnc`items-center mx-4`,
-                      { 
+                      {
                         opacity: fadeAnim,
-                        transform: [{ 
+                        transform: [{
                           translateY: slideAnim.interpolate({
                             inputRange: [0, 50],
                             outputRange: [0, 50 + (index * 10)],
@@ -229,7 +258,7 @@ const LandingScreen = ({ navigateToSignIn, navigateToSignUp }) => {
             </View>
 
             {/* Action buttons */}
-            <Animated.View 
+            <Animated.View
               style={[
                 twrnc`items-center`,
                 { transform: [{ scale: buttonScaleAnim }] }
@@ -247,7 +276,7 @@ const LandingScreen = ({ navigateToSignIn, navigateToSignUp }) => {
                     colors={['#4361EE', '#3651D4']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
-                    style={twrnc`py-4 px-8 rounded-2xl items-center flex-row justify-center border border-white border-opacity-10`}
+                    style={twrnc`py-${responsivePadding.base} px-${responsivePadding.lg} rounded-2xl items-center flex-row justify-center border border-white border-opacity-10`}
                   >
                     {signupLoading ? (
                       <ActivityIndicator color="#fff" size="small" />
@@ -286,41 +315,6 @@ const LandingScreen = ({ navigateToSignIn, navigateToSignUp }) => {
                     )}
                   </TouchableOpacity>
                 </View>
-              </View>
-            </Animated.View>
-
-            {/* Bottom stats/social proof */}
-            <Animated.View 
-              style={[
-                twrnc`flex-row justify-center items-center mt-8 pt-6 border-t border-white border-opacity-10`,
-                { opacity: fadeAnim }
-              ]}
-            >
-              <View style={twrnc`items-center mx-4`}>
-                <CustomText weight="bold" style={twrnc`text-white text-lg`}>
-                  10K+
-                </CustomText>
-                <CustomText style={twrnc`text-white opacity-60 text-xs`}>
-                  Active Users
-                </CustomText>
-              </View>
-              <View style={twrnc`w-px h-8 bg-white opacity-20 mx-4`} />
-              <View style={twrnc`items-center mx-4`}>
-                <CustomText weight="bold" style={twrnc`text-white text-lg`}>
-                  50M+
-                </CustomText>
-                <CustomText style={twrnc`text-white opacity-60 text-xs`}>
-                  Steps Tracked
-                </CustomText>
-              </View>
-              <View style={twrnc`w-px h-8 bg-white opacity-20 mx-4`} />
-              <View style={twrnc`items-center mx-4`}>
-                <CustomText weight="bold" style={twrnc`text-white text-lg`}>
-                  4.9★
-                </CustomText>
-                <CustomText style={twrnc`text-white opacity-60 text-xs`}>
-                  App Rating
-                </CustomText>
               </View>
             </Animated.View>
           </Animated.View>
