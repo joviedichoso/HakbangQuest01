@@ -27,12 +27,6 @@ Built with **React Native** and **Firebase**, HakbangQuest provides a smooth exp
 
 ---
 
-## 📄 License  
-This project is licensed under the **MIT License**.  
-See the [LICENSE](LICENSE) file for details.  
-
----
-
 ## 📬 Contact  
 For support or inquiries:  
 📧 Email: **support@hakbangquest.com**  
