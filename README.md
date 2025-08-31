@@ -1,8 +1,8 @@
 # HakbangQuest  
 
-<img alt="React Native" src="https://img.shields.io/badge/React%20Native-2023-blue">  
-<img alt="Firebase" src="https://img.shields.io/badge/Firebase-Cloud-yellow">  
-<img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-green">  
+![React Native](https://img.shields.io/badge/React_Native-2023-blue?logo=react)
+![Firebase](https://img.shields.io/badge/Firebase-Cloud-yellow?logo=firebase)
+![License: MIT](https://img.shields.io/badge/License-MIT-green?logo=open-source-initiative)
 
 ---
 
